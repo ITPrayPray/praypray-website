@@ -7,16 +7,24 @@
 - Build: `npm run build`
 - Production: `npm run start`
 - Lint: `npm run lint`
+- Type Check: `npx tsc --noEmit`
+- Test Component: `npx jest src/components/ComponentName.test.tsx`
+- Test Page: `npx jest src/app/path/page.test.tsx`
 
 ## Code Style
-- **Imports**: Group related imports together; React first, then third-party libraries, then local components/utilities
+- **Imports**: Order - React, third-party libraries, UI components, hooks, utilities, types
 - **Components**: Use TypeScript interfaces for props; functional components with React hooks
 - **Naming**: PascalCase for components/interfaces; camelCase for variables/functions
-- **Types**: Always define types for props, state, and function parameters/returns
-- **Error Handling**: Use try/catch with specific error messages; avoid generic error handling
-- **CSS**: Use Tailwind CSS classes; maintain consistent spacing patterns
-- **Data Fetching**: Use axios for API calls; handle loading/error states
-- **Internationalization**: Support both Chinese (zh-Hant) and English
+- **Types**: Always define explicit types; use Zod for validation; avoid `any`
+- **Error Handling**: Use try/catch with specific error messages; log errors with context
+- **State Management**: Prefer React hooks (useState, useReducer) for component state
+- **CSS**: Use Tailwind with shadcn/ui components; follow design system tokens
+- **Formatting**: 2-space indentation; 80-char line limit; trailing commas for multi-line
+- **Data Fetching**: Use axios; implement loading/error states; handle request timeouts
 
 ## Architecture
-PrayPray is a Next.js application with Express backend, using Supabase for data storage.
+- **Frontend**: Next.js 14 (App Router) with TypeScript and React 18
+- **Backend**: Express server with Supabase integration
+- **UI Components**: shadcn/ui with Radix UI primitives and Tailwind CSS
+- **Data Flow**: Server components → Client islands → API endpoints
+- **Internationalization**: Supports Chinese (zh-Hant) and English (en)
