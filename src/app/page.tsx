@@ -6,18 +6,21 @@ import SearchResults from '@/components/SearchResults';
 import GoogleMapComponent from '@/components/GoogleMapComponent';
 
 
-interface Temple {
-  temple_id: string;
-  temple_name: string;
+interface Listing {
+  listing_id: string;
+  listing_name: string;
   lat: number;
   lng: number;
-  // ... 其他字段
+  location?: string;
+  description?: string;
+  gods?: Array<{god: {god_name: string}}>;
+  image_urls?: string[];
 }
 
 export default function Home() {
-  const [searchResults, setSearchResults] = useState<Temple[]>([]);
+  const [searchResults, setSearchResults] = useState<Listing[]>([]);
 
-  const handleSearch = (results: Temple[]) => {
+  const handleSearch = (results: Listing[]) => {
     setSearchResults(results);
   };
 
@@ -30,11 +33,18 @@ export default function Home() {
       <main className="mt-8">
         <SearchBar onSearch={handleSearch} />
         <GoogleMapComponent
-          markers={searchResults.map((temple) => ({
-            lat: temple.lat,
-            lng: temple.lng,
-            temple_name: temple.temple_name,
-          }))}
+          markers={searchResults.map((listing) => {
+            console.log('Processing listing for map:', listing);
+            return {
+              lat: listing.lat,
+              lng: listing.lng,
+              listing_name: listing.listing_name,
+              location: listing.location || '',
+              listing_id: listing.listing_id,
+              gods: listing.gods?.map((g: any) => g.god?.god_name).join(', ') || '',
+              image_urls: listing.image_urls || []
+            };
+          })}
         />
         <SearchResults results={searchResults} />
       </main>

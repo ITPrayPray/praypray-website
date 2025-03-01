@@ -23,14 +23,14 @@ export async function GET(request: NextRequest) {
 
     // 执行查询，获取最近的寺庙数据
     const { data, error } = await supabase
-      .from('temples')
+      .from('listings')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
-      console.error('Error fetching recent temples:', error);
-      return NextResponse.json({ error: 'Failed to fetch recent temples' }, { status: 500 });
+      console.error('Error fetching recent listings:', error);
+      return NextResponse.json({ error: 'Failed to fetch recent listings' }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 200 });

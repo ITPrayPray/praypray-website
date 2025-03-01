@@ -6,7 +6,7 @@ import AppShell from '@/components/AppShell';
 
 export const metadata: Metadata = {
   title: '拜拜',
-  description: 'Pray Pray - Gods and Temples exploration and more.',
+  description: 'Pray Pray - Gods and listings exploration and more.',
 };
 
 export default function RootLayout({

@@ -4,18 +4,25 @@ import { ColumnDef } from '@tanstack/react-table';
 import { Button } from '@/components/ui/button';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 
-interface Temple {
-  temple_id: string;
-  temple_name: string;
+interface Listing {
+  listing_id: string;
+  listing_name: string;
   location: string;
   description: string;
   state: { state_name: string } | null;
   services: Array<{ service: { service_name: string } }> | null;
   religions: Array<{ religion: { religion_name: string } }> | null;
   gods: Array<{ god: { god_name: string } }> | null;
+  tag: { tag_name: string } | null; // 新增 tag 屬性，若沒有資料則為 null
 }
 
-export const columns: ColumnDef<Temple>[] = [
+export const columns: ColumnDef<Listing>[] = [
+    // 新增 Tag 欄位
+  {
+    header: '標籤',
+    accessorFn: (row) => row.tag?.tag_name || '未知',
+    id: 'tag',
+  },
   {
     header: '宗教',
     accessorFn: (row) =>
@@ -39,7 +46,7 @@ export const columns: ColumnDef<Temple>[] = [
         )}
       </Button>
     ),
-    accessorKey: 'temple_name',
+    accessorKey: 'listing_name',
     enableSorting: true,
   },
   {

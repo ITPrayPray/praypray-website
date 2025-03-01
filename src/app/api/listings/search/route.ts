@@ -14,31 +14,32 @@ export async function GET(request: NextRequest) {
   try {
     // 执行查询，获取寺庙及其关联的数据
     const { data, error } = await supabase
-      .from('temples')
+      .from('listings')
       .select(`
-        temple_id,
-        temple_name,
+        listing_id,
+        listing_name,
         location,
         description,
         lat,
         lng,
         state:state_id(state_name),
-        services:temple_services(
+        services:listing_services(
           service:service_id(service_name)
         ),
-        religions:temple_religions(
+        religions:listing_religions(
           religion:religion_id(religion_name)
         ),
-        gods:temple_gods(
+        gods:listing_gods(
           god:god_id(god_name)
-        )
+        ),
+        tag:tag_id(tag_name)
       `)
-      .ilike('temple_name', `%${searchQuery}%`);
+      .ilike('listing_name', `%${searchQuery}%`);
 
     if (error) {
-      console.error('Error fetching temples:', error);
+      console.error('Error fetching listings:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch temples' },
+        { error: 'Failed to fetch listings' },
         { status: 500 }
       );
     }

@@ -5,15 +5,16 @@ import { GoogleMap, LoadScript, Marker, OverlayView } from "@react-google-maps/a
 import { renderToStaticMarkup } from "react-dom/server";
 import { MapPin } from "lucide-react";
 import Slider from "react-slick";
+import Link from 'next/link';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 interface MarkerData {
   lat: number;
   lng: number;
-  temple_name: string;
+  listing_name: string;
   location: string;
-  temple_id: string;
+  listing_id: string;
   gods: string;
   image_urls?: string[];
 }
@@ -106,15 +107,15 @@ export default function GoogleMapComponent({
         >
           {markers.map((marker) => (
             <Marker
-              key={marker.temple_id}
+              key={marker.listing_id}
               position={{ lat: marker.lat, lng: marker.lng }}
               label={{
-                text: marker.temple_name,
+                text: marker.listing_name,
                 className: "hidden",
               }}
               icon={{
                 url: getIcon(
-                  selectedMarker && selectedMarker.temple_id === marker.temple_id
+                  selectedMarker && selectedMarker.listing_id === marker.listing_id
                     ? "#FFD700"
                     : "#000000"
                 ),
@@ -166,7 +167,7 @@ export default function GoogleMapComponent({
                   {/* 内容區域 */}
                   <div className="info-content p-4 sm:p-6 md:p-8 overflow-hidden" style={{ flexBasis: '60%' }}>
                     <h3 className="title text-lg sm:text-xl md:text-2xl font-bold mb-1">
-                      {selectedMarker.temple_name}
+                      {selectedMarker.listing_name}
                     </h3>
                     <p className="description text-sm sm:text-base md:text-lg text-gray-600 mb-1">
                       {selectedMarker.gods}
@@ -174,12 +175,19 @@ export default function GoogleMapComponent({
                     <p className="location text-sm sm:text-base md:text-lg text-gray-600 mb-1">
                       {selectedMarker.location}
                     </p>
-                    <a
-                      href={`/temple/${selectedMarker.temple_id}`}
-                      className="details-link text-blue-500 underline text-sm sm:text-base md:text-lg"
-                    >
+                      <Link 
+                    href={`/detail/${encodeURIComponent(String(selectedMarker.listing_id))}`}
+                    onClick={(e) => {
+                      console.log('Detail link clicked for:', selectedMarker);
+                      console.log('Navigating to:', `/detail/${encodeURIComponent(String(selectedMarker.listing_id))}`);
+                      console.log('Listing ID type:', typeof selectedMarker.listing_id);
+                      console.log('Listing ID value:', selectedMarker.listing_id);
+                    }}
+                  >
+                    <span className="details-link text-blue-500 underline text-sm sm:text-base md:text-lg">
                       查看详情
-                    </a>
+                    </span>
+                  </Link>
                   </div>
                 </div>
               </div>

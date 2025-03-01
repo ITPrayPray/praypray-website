@@ -10,6 +10,7 @@ import {
   Heart,
   BarChart2,
   Menu,
+  FileText,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -46,10 +47,23 @@ export default function Sidebar({
       href: '/analytics',
       icon: <BarChart2 className="w-5 h-5" />,
     },
+    {
+      name: '詳細信息', // 新增選單項目
+      href: '/detail',
+      icon: <FileText className="w-5 h-5" />,
+    },
   ];
 
+  // 定義判斷當前選單項目是否 active 的邏輯
+  const isActive = (itemHref: string) => {
+    if (itemHref === '/detail') {
+      return pathname.startsWith('/detail');
+    }
+    return pathname === itemHref;
+  };
+
   if (!isOpen) {
-    // 当侧边栏关闭时，不渲染侧边栏
+    // 當側邊欄關閉時，不渲染側邊欄
     return null;
   }
 
@@ -63,15 +77,15 @@ export default function Sidebar({
         !isDesktop && (isOpen ? 'translate-x-0' : '-translate-x-full')
       }`}
     >
-      {/* 顶部部分 */}
+      {/* 頂部部分 */}
       <div className="p-4 flex items-center justify-between border-b">
-          <h2 className="text-xl font-bold">拜拜 Pray Pray</h2>
-        {/* 显示关闭按钮 */}
+        <h2 className="text-xl font-bold">拜拜 Pray Pray</h2>
+        {/* 顯示關閉按鈕 */}
         <button onClick={toggleSidebar} className="focus:outline-none">
           <Menu className="w-6 h-6" />
         </button>
       </div>
-      {/* 菜单项 */}
+      {/* 選單項目 */}
       <nav className="flex-1 overflow-y-auto">
         <ul>
           {menuItems.map((item) => (
@@ -79,14 +93,12 @@ export default function Sidebar({
               <Link
                 href={item.href}
                 className={`flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 ${
-                  pathname === item.href
-                    ? 'bg-gray-100 font-semibold'
-                    : ''
+                  isActive(item.href) ? 'bg-gray-100 font-semibold' : ''
                 }`}
                 onClick={!isDesktop ? toggleSidebar : undefined}
               >
                 {item.icon}
-                  <span className="ml-3">{item.name}</span>
+                <span className="ml-3">{item.name}</span>
               </Link>
             </li>
           ))}

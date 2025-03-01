@@ -16,9 +16,9 @@ import {
   CommandSeparator,
 } from '@/components/ui/command';
 
-interface Temple {
+interface listing {
   id: string;
-  temple_name: string;
+  listing_name: string;
   location: string;
   description: string;
   lat: number;
@@ -26,20 +26,20 @@ interface Temple {
 }
 
 interface SearchBarProps {
-  onSearch: (results: Temple[]) => void;
+  onSearch: (results: listing[]) => void;
 }
 
 export default function SearchBar({ onSearch }: SearchBarProps) {
   const [query, setQuery] = useState<string>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [recentTemples, setRecentTemples] = useState<Temple[]>([]);
+  const [recentlistings, setRecentlistings] = useState<listing[]>([]);
   const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const searchBarRef = useRef<HTMLDivElement>(null);
 
   const totalItems =
-    searchHistory.length + (recentTemples.length > 0 ? recentTemples.length : 0);
+    searchHistory.length + (recentlistings.length > 0 ? recentlistings.length : 0);
 
   const handleInputChange = (event: ChangeEvent<HTMLInputElement>) => {
     setQuery(event.target.value);
@@ -53,8 +53,16 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
     try {
       const response = await axios.get(
-        `/api/temples/search?search=${encodeURIComponent(searchTerm)}`
+        `/api/listings/search?search=${encodeURIComponent(searchTerm)}`
       );
+      
+      // Log response data structure for debugging
+      console.log('Search API response:', response.data);
+      if (response.data && response.data.length > 0) {
+        console.log('First listing ID type:', typeof response.data[0].listing_id);
+        console.log('First listing ID value:', response.data[0].listing_id);
+      }
+      
       onSearch(response.data);
 
       setSearchHistory((prevHistory) => {
@@ -104,10 +112,10 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           setQuery(selectedHistoryItem);
           handleSearch(selectedHistoryItem);
         } else {
-          const templeIndex = highlightedIndex - totalHistoryItems;
-          const selectedTemple = recentTemples[templeIndex];
-          setQuery(selectedTemple.temple_name);
-          handleSearch(selectedTemple.temple_name);
+          const listingIndex = highlightedIndex - totalHistoryItems;
+          const selectedlisting = recentlistings[listingIndex];
+          setQuery(selectedlisting.listing_name);
+          handleSearch(selectedlisting.listing_name);
         }
       } else {
         handleSearch();
@@ -117,19 +125,19 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   };
 
   useEffect(() => {
-    const fetchRecentTemples = async () => {
+    const fetchRecentlistings = async () => {
       try {
-        const response = await axios.get<Temple[]>(
-          '/api/temples/recent?limit=5'
+        const response = await axios.get<listing[]>(
+          '/api/listings/recent?limit=5'
         );
-        console.log('Fetched recent temples:', response.data);
-        setRecentTemples(response.data);
+        console.log('Fetched recent listings:', response.data);
+        setRecentlistings(response.data);
       } catch (error) {
-        console.error('Error fetching recent temples:', error);
+        console.error('Error fetching recent listings:', error);
       }
     };
 
-    fetchRecentTemples();
+    fetchRecentlistings();
   }, []);
 
   // 添加全局点击事件监听器
@@ -188,7 +196,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
       <Command className="rounded-lg border-none">
         <CommandInput
           ref={inputRef}
-          placeholder="尋找寺廟... Search temples..."
+          placeholder="尋找寺廟... Search listings..."
           value={query}
           onInput={handleInputChange}
           onFocus={() => setIsDropdownOpen(true)}
@@ -218,20 +226,20 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
             </CommandGroup>
           )}
 
-          {searchHistory.length > 0 && recentTemples.length > 0 && (
+          {searchHistory.length > 0 && recentlistings.length > 0 && (
             <CommandSeparator />
           )}
 
-          {recentTemples.length > 0 ? (
-            <CommandGroup heading="最新廟宇 Recently Added Temples">
-              {recentTemples.map((temple, idx) => {
+          {recentlistings.length > 0 ? (
+            <CommandGroup heading="最新廟宇 Recently Added listings">
+              {recentlistings.map((listing, idx) => {
                 const index = searchHistory.length + idx;
                 return (
                   <CommandItem
-                    key={temple.id}
+                    key={listing.id}
                     onSelect={() => {
-                      setQuery(temple.temple_name);
-                      handleSearch(temple.temple_name);
+                      setQuery(listing.listing_name);
+                      handleSearch(listing.listing_name);
                       setHighlightedIndex(null);
                     }}
                     onMouseEnter={() => setHighlightedIndex(index)}
@@ -243,14 +251,14 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
                   >
                     <div className="flex flex-col">
                       <span className="font-semibold text-gray-800">
-                        {temple.temple_name || '名稱未知'}
+                        {listing.listing_name || '名稱未知'}
                       </span>
                       <span className="text-sm text-gray-600">
-                        {temple.location || '位置未知'}
+                        {listing.location || '位置未知'}
                       </span>
                       <span className="text-sm text-gray-600">
-                        {temple.description
-                          ? truncateDescription(temple.description, 100)
+                        {listing.description
+                          ? truncateDescription(listing.description, 100)
                           : '暫無描述'}
                       </span>
                     </div>
@@ -260,7 +268,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
             </CommandGroup>
           ) : (
             <CommandEmpty>
-              最近沒有新增廟宇。No recent temples found.
+              最近沒有新增廟宇。No recent listings found.
             </CommandEmpty>
           )}
         </CommandList>

@@ -4,9 +4,9 @@ import React from 'react';
 import { DataTable } from '@/components/DataTable';
 import { columns } from '@/components/columns';
 
-interface Temple {
-  temple_id: string;
-  temple_name: string;
+interface Listing {
+  listing_id: string;
+  listing_name: string;
   location: string;
   description: string;
   state: { state_name: string } | null;
@@ -16,7 +16,7 @@ interface Temple {
 }
 
 interface SearchResultsProps {
-  results: Temple[];
+  results: Listing[];
 }
 
 export default function SearchResults({ results }: SearchResultsProps) {
