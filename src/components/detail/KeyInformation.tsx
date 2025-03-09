@@ -62,18 +62,18 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 shadow-sm border border-border">
+    <div className="rounded-xl">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="space-y-3 flex-1">
           {/* Type and Religion Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             {type && (
-              <Badge variant={getBadgeVariant(type)} className="capitalize font-medium">
+              <Badge variant={getBadgeVariant(type)} className="capitalize text-[11px]">
                 {type.toLowerCase()}
               </Badge>
             )}
             {religions?.map((r, i) => (
-              <Badge key={i} variant="outline" className="font-medium text-black border-gray-300">
+              <Badge key={i} variant="outline" className="text-[14px] text-black border-gray-300">
                 {r.religion.religion_name}
               </Badge>
             ))}
@@ -88,7 +88,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
           {gods && gods.length > 0 && (
             <div className="flex flex-wrap items-start gap-2">
               <Star className="h-4 w-4 mt-0.5 text-amber-500 flex-shrink-0" />
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-[14px] text-gray-800">
                 神祇: {gods.map(g => g.god.god_name).join(', ')}
               </span>
             </div>
@@ -98,7 +98,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
           {(address || state) && (
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 mt-0.5 text-gray-700 flex-shrink-0" />
-              <span className="text-sm font-medium text-gray-800">
+              <span className="text-[14px] text-gray-800">
                 {[address, state].filter(Boolean).join(', ')}
               </span>
             </div>
@@ -112,7 +112,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
             variant={isFavorite ? "default" : "outline"}
             size="icon"
             className={cn(
-              "h-12 w-12 flex-shrink-0 rounded-full shadow-sm", 
+              "h-8 w-8 flex-shrink-0 rounded-full", 
               isFavorite 
                 ? "bg-red-500 hover:bg-red-600 border-red-500 text-white" 
                 : "border-gray-300 hover:border-red-200 hover:text-red-500"
@@ -121,7 +121,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
           >
             <Heart
               className={cn(
-                "h-6 w-6 transition-all duration-300",
+                "h-4 w-4 transition-all duration-300",
                 isFavorite ? "fill-current" : ""
               )}
             />
@@ -132,7 +132,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
       {/* Description Section with Read More/Less */}
       {description && (
         <div className="mt-6">
-          <p className="text-gray-800 leading-relaxed">
+          <p className="text-[14px] text-gray-800 leading-relaxed">
             {truncatedDescription}
           </p>
           
@@ -140,7 +140,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
             <Button
               variant="link"
               size="sm"
-              className="mt-2 p-0 h-auto text-primary font-medium"
+              className="mt-2 p-0 h-auto text-primary text-[14px]"
               onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
             >
               {isDescriptionExpanded ? 'Show less' : 'Read more'}

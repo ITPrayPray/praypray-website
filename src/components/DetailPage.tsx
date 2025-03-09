@@ -2,7 +2,6 @@
 'use client';
 import React from 'react';
 import Head from 'next/head';
-import { PhotoCarousel } from './detail/PhotoCarousel';
 import { KeyInformation } from './detail/KeyInformation';
 import { LocationMap } from './detail/LocationMap';
 import { AdditionalDetails } from './detail/AdditionalDetails';
@@ -18,7 +17,7 @@ export interface DetailData {
   listing_name: string;
   listing_type?: 'TEMPLE' | 'PROSERVICE' | string;
   description?: string;
-  image_urls?: string[];
+  image_urls?: string[] | null;
   whatsapp?: string;
   phone?: string;
   email?: string;
@@ -43,6 +42,7 @@ export interface DetailData {
     user_name: string;
     rating: number;
     comment: string;
+    images?: string[] | null;
     created_at: string;
     user_avatar?: string;
   }>;
@@ -60,17 +60,6 @@ interface DetailPageProps {
  */
 const DetailPageSkeleton = () => (
   <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-    {/* Hero section skeleton */}
-    <div className="relative w-full">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-2 md:gap-4">
-        <Skeleton className="aspect-[4/3] w-full rounded-xl md:col-span-2" />
-        <div className="hidden md:grid grid-rows-3 gap-2 md:gap-4">
-          <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-          <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-          <Skeleton className="aspect-[4/3] w-full rounded-xl" />
-        </div>
-      </div>
-    </div>
     
     {/* Key information skeleton */}
     <div className="space-y-4">
@@ -88,15 +77,15 @@ const DetailPageSkeleton = () => (
       <Skeleton className="h-24 w-full" />
     </div>
     
-    {/* Map skeleton */}
-    <Skeleton className="h-80 w-full rounded-xl" />
-    
     {/* Additional details skeleton */}
     <div className="space-y-4">
       <Skeleton className="h-10 w-48" />
       <Skeleton className="h-48 w-full rounded-xl" />
     </div>
-    
+
+    {/* Map skeleton */}
+    <Skeleton className="h-[300px] md:h-[350px] lg:h-[400px] w-full rounded-md" />
+
     {/* Reviews skeleton */}
     <div className="space-y-4">
       <Skeleton className="h-10 w-36" />
@@ -150,11 +139,6 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
             <BackButton />
           </div>
 
-          {/* Hero Section - Photo Carousel */}
-          <section className="mb-10" aria-label="Listing photos">
-            <PhotoCarousel images={data.image_urls || []} title={data.listing_name} />
-          </section>
-
           {/* Key Information */}
           <section id={sectionIds.info} className="mb-10" aria-label="Listing information">
             <KeyInformation 
@@ -168,39 +152,36 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
             />
           </section>
 
-          <Separator className="my-10" />
-
-          {/* Map Section */}
-          {(data.lat && data.lng) && (
-            <section id={sectionIds.location} className="mb-10" aria-label="Location">
-              <h2 className="text-2xl font-semibold mb-6 text-foreground">Location</h2>
-              <div className="rounded-xl overflow-hidden shadow-sm border border-border">
-                <LocationMap 
-                  lat={data.lat} 
-                  lng={data.lng} 
-                  name={data.listing_name}
-                  address={data.address || data.location || ''}
-                />
-              </div>
+          {/* Map and Details Section Container */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
+            {/* Additional Details */}
+            <section id={sectionIds.details} className="mb-10 md:mb-0" aria-label="Additional details">
+              <AdditionalDetails 
+                services={data.services}
+                operatingHours={data.operating_hours}
+                contactInfo={{
+                  phone: data.phone,
+                  whatsapp: data.whatsapp,
+                  email: data.email,
+                  website: data.website
+                }}
+              />
             </section>
-          )}
 
-          <Separator className="my-10" />
-
-          {/* Additional Details */}
-          <section id={sectionIds.details} className="mb-10" aria-label="Additional details">
-            <h2 className="text-2xl font-semibold mb-6 text-foreground">Details</h2>
-            <AdditionalDetails 
-              services={data.services}
-              operatingHours={data.operating_hours}
-              contactInfo={{
-                phone: data.phone,
-                whatsapp: data.whatsapp,
-                email: data.email,
-                website: data.website
-              }}
-            />
-          </section>
+            {/* Map Section */}
+            {(data.lat && data.lng) && (
+              <section id={sectionIds.location} className="mb-10 md:mb-0" aria-label="Location">
+                <div className="rounded-xl overflow-hidden shadow-sm border border-border h-[300px] md:h-[350px] lg:h-[400px]">
+                  <LocationMap 
+                    lat={data.lat} 
+                    lng={data.lng} 
+                    name={data.listing_name}
+                    address={data.address || data.location || ''}
+                  />
+                </div>
+              </section>
+            )}
+          </div>
 
           <Separator className="my-10" />
 
