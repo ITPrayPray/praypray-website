@@ -14,12 +14,10 @@ export async function GET(
   try {
     const { id } = params;
     console.log(`Detail API called with ID: ${id}`);
-
-    // Log the ID format for debugging
     console.log(`ID type: ${typeof id}, value: ${id}`);
 
-    // 從 listings 表中查詢符合 id 的資料，並關聯取得相關欄位資料
-    const { data, error } = await supabase
+    // 第一階段：查詢 listings 的基本資料（不包含服務資訊）
+    const { data: listingData, error: listingError } = await supabase
       .from('listings')
       .select(`
         listing_id,
@@ -29,9 +27,6 @@ export async function GET(
         lat,
         lng,
         state:state_id(state_name),
-        services:listing_services(
-          service:service_id(service_name)
-        ),
         religions:listing_religions(
           religion:religion_id(religion_name)
         ),
@@ -43,35 +38,41 @@ export async function GET(
       .eq('listing_id', id)
       .single();
 
-    if (error) {
-      console.error('Error fetching listing detail:', error);
-      
-      // Try an alternative query without .single() to see what's available
-      const checkQuery = await supabase
-        .from('listings')
-        .select('listing_id')
-        .eq('listing_id', id);
-        
-      console.log('Check query results:', checkQuery);
-      
-      if (checkQuery.error) {
-        console.error('Check query error:', checkQuery.error);
-      } else if (checkQuery.data && checkQuery.data.length === 0) {
-        console.log(`No listing found with ID: ${id}`);
-        return NextResponse.json(
-          { error: `No listing found with ID: ${id}` },
-          { status: 404 }
-        );
-      }
-      
+    if (listingError) {
+      console.error('Error fetching listing detail:', listingError);
       return NextResponse.json(
-        { error: 'Failed to fetch listing detail', details: error.message },
+        { error: 'Failed to fetch listing detail', details: listingError.message },
         { status: 500 }
       );
     }
 
-    console.log('Found listing data:', data);
-    return NextResponse.json(data, { status: 200 });
+    // 第二階段：分開查詢 listing_services 與 service 資料
+    const { data: servicesData, error: servicesError } = await supabase
+      .from('listing_services')
+      .select(`
+         id,
+         price,
+         custom_description,
+         service:service_id(service_name)
+      `)
+      .eq('listing_id', id);
+
+    if (servicesError) {
+      console.error('Error fetching services:', servicesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch services', details: servicesError.message },
+        { status: 500 }
+      );
+    }
+
+    // 將 servicesData 合併到 listingData 中
+    const combinedData = {
+      ...listingData,
+      services: servicesData
+    };
+
+    console.log('Found combined listing data:', combinedData);
+    return NextResponse.json(combinedData, { status: 200 });
   } catch (err: any) {
     console.error('Error in detail API route:', err);
     return NextResponse.json(

@@ -10,6 +10,7 @@
 - Type Check: `npx tsc --noEmit`
 - Test Component: `npx jest src/components/ComponentName.test.tsx`
 - Test Page: `npx jest src/app/path/page.test.tsx`
+- Debug: `NODE_OPTIONS='--inspect' npm run dev`
 
 ## Code Style
 - **Imports**: Order - React, third-party libraries, UI components, hooks, utilities, types
@@ -20,7 +21,7 @@
 - **State Management**: Prefer React hooks (useState, useReducer) for component state
 - **CSS**: Use Tailwind with shadcn/ui components; follow design system tokens
 - **Formatting**: 2-space indentation; 80-char line limit; trailing commas for multi-line
-- **Data Fetching**: Use axios; implement loading/error states; handle request timeouts
+- **Data Fetching**: Use Next.js data fetching methods; handle loading/error states properly
 
 ## Architecture
 - **Frontend**: Next.js 14 (App Router) with TypeScript and React 18
@@ -28,3 +29,4 @@
 - **UI Components**: shadcn/ui with Radix UI primitives and Tailwind CSS
 - **Data Flow**: Server components → Client islands → API endpoints
 - **Internationalization**: Supports Chinese (zh-Hant) and English (en)
+- **Database**: Supabase for auth, storage, and database operations

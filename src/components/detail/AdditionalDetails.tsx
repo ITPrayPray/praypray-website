@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { DetailData } from '../DetailPage';
-import { cn } from '@/lib/utils';
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
+import { cn } from '../../lib/utils';
 import { ShoppingBag, Clock } from 'lucide-react';
 import {
   Table,
@@ -11,38 +11,66 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "../../components/ui/table";
 
+// 定義從 listing_services 與 service 表抓取後的資料型別
 interface Service {
+  id: string;
+  price?: string;
+  custom_description?: string;
+  // 使用明確別名來嵌入 service 表資料
   service: {
     service_name: string;
     service_description?: string;
-    price?: string;
   };
 }
 
-interface AdditionalDetailsProps {
-  services?: Service[];
-  operatingHours?: DetailData['operating_hours'];
+interface OperatingHours {
+  day: string;
+  open_time: string;
+  close_time: string;
+  is_closed: boolean;
 }
 
+interface AdditionalDetailsProps {
+  listingId?: string;
+  services?: Array<{
+    price?: string;
+    custom_description?: string;
+    service: { 
+      service_name: string; 
+      service_description?: string 
+    };
+  }>;
+  operatingHours?: OperatingHours[];
+}
+
+/**
+ * ServiceTable - 以表格方式顯示服務名稱、價格與自訂說明
+ */
 const ServiceTable: React.FC<{ services: Service[] }> = ({ services }) => {
   return (
     <div className="rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px] text-[14px]">Service Name</TableHead>
+            <TableHead className="w-[200px] text-[14px]">Service</TableHead>
             <TableHead className="w-[100px] text-right text-[14px]">Price</TableHead>
-            <TableHead className="text-[14px]">Description</TableHead>
+            <TableHead className="text-[14px]">Custom Description</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {services.map((item, index) => (
-            <TableRow key={index}>
-              <TableCell className="font-medium text-[14px]">{item.service.service_name}</TableCell>
-              <TableCell className="text-right text-[14px]">{item.service.price || '-'}</TableCell>
-              <TableCell className="text-[14px]">{item.service.service_description || '-'}</TableCell>
+          {services.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium text-[14px]">
+                {item.service?.service_name || '-'}
+              </TableCell>
+              <TableCell className="text-right text-[14px]">
+                {item.price || '-'}
+              </TableCell>
+              <TableCell className="text-[14px]">
+                {item.custom_description || '-'}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
@@ -51,7 +79,7 @@ const ServiceTable: React.FC<{ services: Service[] }> = ({ services }) => {
   );
 };
 
-const OperatingHoursTable: React.FC<{ hours: DetailData['operating_hours'] }> = ({ hours }) => {
+const OperatingHoursTable: React.FC<{ hours: OperatingHours[] }> = ({ hours }) => {
   return (
     <div className="rounded-md border">
       <Table>
@@ -82,31 +110,93 @@ const OperatingHoursTable: React.FC<{ hours: DetailData['operating_hours'] }> = 
 };
 
 /**
- * AdditionalDetails - Comprehensive display of listing details including services,
- * operating hours, and contact information in a scrollable single-page format
+ * AdditionalDetails - 綜合展示 listing 的服務與營業時間
+ *
+ * 此組件會從 Supabase 的 listing_services 表抓取資料，
+ * 並透過已建立的外鍵關係，從 service 表取得 service_name，
+ * 最後顯示服務名稱、價格與 custom_description。
  */
 export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
-  services,
+  listingId,
+  services: initialServices,
   operatingHours,
 }) => {
-  const hasServices = services && services.length > 0;
-  const hasOperatingHours = operatingHours && operatingHours.length > 0;
-  
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 如果已提供初始服務資料，則使用該資料
+  useEffect(() => {
+    if (initialServices && initialServices.length > 0) {
+      // 轉換為內部 Service 介面格式
+      const formattedServices = initialServices.map((service, index) => ({
+        id: index.toString(),
+        price: service.price,
+        custom_description: service.custom_description,
+        service: service.service,
+      }));
+      setServices(formattedServices);
+      setLoading(false);
+      return;
+    }
+
+    // 否則從 Supabase 取得 listing_services 的服務資料，並嵌入 service 表資料
+    if (listingId) {
+      const fetchServices = async () => {
+        try {
+          // 使用外鍵關係從 listing_services 表取得相關的服務資料
+          const { data, error } = await supabase
+            .from('listing_services')
+            .select(`
+              id,
+              price,
+              custom_description,
+              service:fk_listing_services_service (
+                service_name
+              )
+            `)
+            .eq('listing_id', listingId);
+
+          if (error) {
+            console.error("Error fetching services:", error);
+            setError(error.message);
+          } else {
+            setServices(data as Service[]);
+          }
+        } catch (err) {
+          console.error("Exception fetching services:", err);
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchServices();
+    } else {
+      setLoading(false);
+    }
+  }, [listingId, initialServices]);
+
   return (
     <div className="space-y-8">
-      {/* Services Section */}
-      {hasServices && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <ShoppingBag className="h-5 w-5 text-primary" />
-            <h3 className="text-[14px] font-semibold text-gray-900">Services Offered</h3>
-          </div>
-          <ServiceTable services={services} />
+      {/* 服務區塊 */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-primary" />
+          <h3 className="text-[14px] font-semibold text-gray-900">Services Offered</h3>
         </div>
-      )}
+        {loading ? (
+          <p className="text-[14px] text-gray-600">Loading services...</p>
+        ) : error ? (
+          <p className="text-[14px] text-red-500">Error: {error}</p>
+        ) : services.length > 0 ? (
+          <ServiceTable services={services} />
+        ) : (
+          <p className="text-[14px] text-gray-600">No services available</p>
+        )}
+      </div>
       
-      {/* Operating Hours Section */}
-      {hasOperatingHours && (
+      {/* 營業時間區塊 */}
+      {operatingHours && operatingHours.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
@@ -114,7 +204,8 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
           </div>
           <OperatingHoursTable hours={operatingHours} />
         </div>
-      )}      
+      )}
+      
     </div>
   );
 };
