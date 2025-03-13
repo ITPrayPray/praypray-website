@@ -11,6 +11,8 @@ import { Skeleton } from './ui/skeleton';
 import { BackButton } from './ui/BackButton';
 import { Separator } from './ui/separator';
 import { ScrollToTopButton } from './ui/ScrollToTopButton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { PostsSection } from './detail/PostsSection';
 
 export interface DetailData {
   listing_id?: string;
@@ -31,12 +33,7 @@ export interface DetailData {
   religions?: Array<{ religion: { religion_name: string } }>;
   gods?: Array<{ god: { god_name: string; god_description?: string } }>;
   tag?: { tag_name: string };
-  operating_hours?: Array<{
-    day: string;
-    open_time: string;
-    close_time: string;
-    is_closed: boolean;
-  }>;
+  opening_hours?: Record<string, string>;
   reviews?: Array<{
     id: string;
     user_name: string;
@@ -46,8 +43,47 @@ export interface DetailData {
     created_at: string;
     user_avatar?: string;
   }>;
+  posts?: Array<{
+    comment_id: string;
+    title: string;
+    content: string;
+    created_at: string;
+    user_id: string;
+    listing_id: string;
+  }>;
 }
 
+// 定義我們需要在前端顯示的營業時間結構
+interface OperatingHour {
+  day: string;
+  open_time: string;
+  close_time: string;
+  is_closed: boolean;
+}
+
+// 將 JSONB 格式的 opening_hours 轉成陣列
+function parseOpeningHours(openingHoursObj: Record<string, string>): OperatingHour[] {
+  return Object.entries(openingHoursObj).map(([dayKey, value]) => {
+    const lowerVal = value.toLowerCase();
+    if (lowerVal === 'closed') {
+      return {
+        day: dayKey,
+        open_time: '',
+        close_time: '',
+        is_closed: true,
+      };
+    } else {
+      // 假設格式為 "9:00-16:00"
+      const [open, close] = value.split('-');
+      return {
+        day: dayKey,
+        open_time: open.trim(),
+        close_time: close.trim(),
+        is_closed: false,
+      };
+    }
+  });
+}
 interface DetailPageProps {
   data?: DetailData;
   isLoading?: boolean;
@@ -112,6 +148,11 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
     return <ErrorDisplay message="No listing data found" />;
   }
 
+  // 1. 準備一個解析後的陣列
+  let operatingHoursArray: OperatingHour[] = [];
+  if (data.opening_hours) {
+    operatingHoursArray = parseOpeningHours(data.opening_hours);
+  }
   // Define section IDs for navigation/anchors
   const sectionIds = {
     info: 'listing-info',
@@ -124,11 +165,21 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
     <>
       <Head>
         <title>{`${data.listing_name} | Pray Pray`}</title>
-        <meta name="description" content={data.description || `Details about ${data.listing_name}`} />
+        <meta name="description" 
+        content={data.description || `Details about ${data.listing_name}`} 
+        />
         {/* Open Graph tags for better sharing */}
-        <meta property="og:title" content={`${data.listing_name} | Pray Pray`} />
-        <meta property="og:description" content={data.description || `Details about ${data.listing_name}`} />
-        {data.image_urls?.[0] && <meta property="og:image" content={data.image_urls[0]} />}
+        <meta 
+          property="og:title" 
+          content={`${data.listing_name} | Pray Pray`} 
+        />
+        <meta 
+          property="og:description" 
+          content={data.description || `Details about ${data.listing_name}`} 
+        />
+        {data.image_urls?.[0] && 
+          <meta property="og:image" content={data.image_urls[0]} 
+        />}
         <meta property="og:type" content="website" />
       </Head>
 
@@ -155,10 +206,14 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
           {/* Map and Details Section Container */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
             {/* Additional Details */}
-            <section id={sectionIds.details} className="mb-10 md:mb-0" aria-label="Additional details">
+            <section 
+              id={sectionIds.details} 
+              className="mb-10 md:mb-0" 
+              aria-label="Additional details"
+            >
               <AdditionalDetails 
                 services={data.services}
-                operatingHours={data.operating_hours}
+                operatingHours={operatingHoursArray} // 2. 傳入解析後的陣列
                 contactInfo={{
                   phone: data.phone,
                   whatsapp: data.whatsapp,
@@ -185,12 +240,25 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
 
           <Separator className="my-10" />
 
-          {/* Reviews Section */}
-          <section id={sectionIds.reviews} className="mb-10" aria-label="Reviews">
-            <ReviewSection 
-              reviews={data.reviews || []} 
-              listingId={data.listing_id || ''}
-            />
+          {/* Reviews and Posts Tabs */}
+          <section id={sectionIds.reviews} className="mb-10">
+            <Tabs defaultValue="posts" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="posts">Latest Updates</TabsTrigger>
+                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+              </TabsList>
+              <TabsContent value="posts" className="mt-6">
+                <PostsSection 
+                  posts={data.posts || []} 
+                />
+              </TabsContent>
+              <TabsContent value="reviews" className="mt-6">
+                <ReviewSection 
+                  reviews={data.reviews || []} 
+                  listingId={data.listing_id || ''}
+                />
+              </TabsContent>
+            </Tabs>
           </section>
           
           <ScrollToTopButton />

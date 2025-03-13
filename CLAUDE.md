@@ -2,8 +2,8 @@
 
 ## Commands
 - Development: `npm run dev` (runs frontend + backend concurrently)
-- Frontend only: `npm run frontend`
-- Backend only: `npm run backend`
+- Frontend only: `npm run frontend` (Next.js dev server)
+- Backend only: `npm run backend` (Express server)
 - Build: `npm run build`
 - Production: `npm run start`
 - Lint: `npm run lint`
@@ -21,12 +21,13 @@
 - **State Management**: Prefer React hooks (useState, useReducer) for component state
 - **CSS**: Use Tailwind with shadcn/ui components; follow design system tokens
 - **Formatting**: 2-space indentation; 80-char line limit; trailing commas for multi-line
+- **API Routes**: Follow Next.js App Router patterns; handle errors consistently
 - **Data Fetching**: Use Next.js data fetching methods; handle loading/error states properly
 
 ## Architecture
 - **Frontend**: Next.js 14 (App Router) with TypeScript and React 18
 - **Backend**: Express server with Supabase integration
 - **UI Components**: shadcn/ui with Radix UI primitives and Tailwind CSS
-- **Data Flow**: Server components → Client islands → API endpoints
+- **Authentication**: Supabase Auth with custom UI components
+- **Data Storage**: Supabase for database and file storage
 - **Internationalization**: Supports Chinese (zh-Hant) and English (en)
-- **Database**: Supabase for auth, storage, and database operations

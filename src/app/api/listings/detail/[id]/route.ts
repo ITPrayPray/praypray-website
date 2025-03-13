@@ -33,7 +33,8 @@ export async function GET(
         gods:listing_gods(
           god:god_id(god_name)
         ),
-        tag:tag_id(tag_name)
+        tag:tag_id(tag_name),
+        opening_hours
       `)
       .eq('listing_id', id)
       .single();
@@ -65,10 +66,53 @@ export async function GET(
       );
     }
 
-    // 將 servicesData 合併到 listingData 中
+    // 第三階段：查詢帖子數據（從 comments 表中獲取）
+    const { data: postsData, error: postsError } = await supabase
+      .from('comments')
+      .select(`
+        comment_id,
+        content,
+        created_at,
+        user_id,
+        listing_id
+      `)
+      .eq('listing_id', id)
+      .order('created_at', { ascending: false });
+
+    if (postsError) {
+      console.error('Error fetching posts:', postsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch posts', details: postsError.message },
+        { status: 500 }
+      );
+    }
+
+    // 獲取 listing 的 owner_id
+    const { data: listingOwnerData, error: ownerError } = await supabase
+      .from('listings')
+      .select('owner_id')
+      .eq('listing_id', id)
+      .single();
+
+    if (ownerError) {
+      console.error('Error fetching listing owner:', ownerError);
+      return NextResponse.json(
+        { error: 'Failed to fetch listing owner', details: ownerError.message },
+        { status: 500 }
+      );
+    }
+
+    // 過濾出擁有者的評論作為帖子，並轉換格式
+    const ownerPosts = postsData?.filter(post => post.user_id === listingOwnerData.owner_id).map(post => ({
+      ...post,
+      title: post.content // 使用 content 作為 title
+    })) || [];
+
+    // 將所有數據合併到一起
     const combinedData = {
       ...listingData,
-      services: servicesData
+      services: servicesData,
+      posts: ownerPosts
     };
 
     console.log('Found combined listing data:', combinedData);

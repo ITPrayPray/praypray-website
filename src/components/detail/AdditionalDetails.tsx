@@ -43,6 +43,12 @@ interface AdditionalDetailsProps {
     };
   }>;
   operatingHours?: OperatingHours[];
+  contactInfo?: {
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    website?: string;
+  };
 }
 
 /**
@@ -55,7 +61,7 @@ const ServiceTable: React.FC<{ services: Service[] }> = ({ services }) => {
         <TableHeader>
           <TableRow>
             <TableHead className="w-[200px] text-[14px]">Service</TableHead>
-            <TableHead className="w-[100px] text-right text-[14px]">Price</TableHead>
+            <TableHead className="w-[100px] text-[14px]">Price(HKD)</TableHead>
             <TableHead className="text-[14px]">Custom Description</TableHead>
           </TableRow>
         </TableHeader>
@@ -65,7 +71,7 @@ const ServiceTable: React.FC<{ services: Service[] }> = ({ services }) => {
               <TableCell className="font-medium text-[14px]">
                 {item.service?.service_name || '-'}
               </TableCell>
-              <TableCell className="text-right text-[14px]">
+              <TableCell className="text-[14px]">
                 {item.price || '-'}
               </TableCell>
               <TableCell className="text-[14px]">
@@ -120,7 +126,13 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
   listingId,
   services: initialServices,
   operatingHours,
+  contactInfo,
 }) => {
+  // 添加日誌來檢查數據
+  console.log("AdditionalDetails Props:", {
+    operatingHours
+  });
+
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -205,7 +217,7 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
           <OperatingHoursTable hours={operatingHours} />
         </div>
       )}
-      
+
     </div>
   );
 };

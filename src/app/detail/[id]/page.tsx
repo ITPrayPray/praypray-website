@@ -4,14 +4,18 @@ import { headers } from 'next/headers';
 import DetailPage, { DetailData } from '../../../components/DetailPage';
 import ErrorDisplay from '../../../components/ErrorDisplay';
 
+interface OperatingHour {
+  day: string;
+  open_time: string;
+  close_time: string;
+  is_closed: boolean;
+}
+
 // 透過 fetch 從 API 取得詳細資料，回傳資料型別為 DetailData
 async function fetchDetail(id: string): Promise<DetailData> {
   try {
-    // 從請求標頭取得 host 資訊
     const host = headers().get('host');
-    // 根據環境設定協議，開發環境使用 http，其他環境使用 https
     const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-    // 組合出完整的絕對 URL
     const url = `${protocol}://${host}/api/listings/detail/${id}`;
     
     console.log(`Fetching from: ${url}`);
@@ -37,7 +41,17 @@ export default async function Page({ params }: { params: { id: string } }) {
   try {
     console.log("Detail page for ID:", params.id);
     const data = await fetchDetail(params.id);
-    return <DetailPage data={data} />;
+
+    // 若 data.operating_hours 存在，使用它
+    const operatingHours: OperatingHour[] = data.operating_hours || [];
+    
+    // 添加日誌來檢查數據
+    console.log("Operating Hours Data:", {
+      fromAPI: data.operating_hours,
+      processed: operatingHours
+    });
+
+    return <DetailPage data={data} operatingHours={operatingHours} />;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return <ErrorDisplay message={errorMessage} />;

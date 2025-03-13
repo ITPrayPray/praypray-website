@@ -36,13 +36,13 @@ export const sampleDetailData: DetailData = {
   email: "contact@goldentemple.jp",
   website: "www.goldentemple.jp",
   operating_hours: [
-    { day: "Monday", open_time: "6:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Tuesday", open_time: "6:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Wednesday", open_time: "6:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Thursday", open_time: "6:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Friday", open_time: "6:00 AM", close_time: "9:00 PM", is_closed: false },
-    { day: "Saturday", open_time: "6:00 AM", close_time: "9:00 PM", is_closed: false },
-    { day: "Sunday", open_time: "6:00 AM", close_time: "9:00 PM", is_closed: false }
+    { day: "monday", open_time: "09:00", close_time: "18:00", is_closed: false },
+    { day: "tuesday", open_time: "09:00", close_time: "18:00", is_closed: false },
+    { day: "wednesday", open_time: "09:00", close_time: "18:00", is_closed: false },
+    { day: "thursday", open_time: "09:00", close_time: "18:00", is_closed: false },
+    { day: "friday", open_time: "09:00", close_time: "18:00", is_closed: false },
+    { day: "saturday", open_time: "10:00", close_time: "16:00", is_closed: false },
+    { day: "sunday", open_time: "00:00", close_time: "00:00", is_closed: true }
   ],
   reviews: [
     {
