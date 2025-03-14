@@ -242,17 +242,33 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
 
           {/* Reviews and Posts Tabs */}
           <section id={sectionIds.reviews} className="mb-10">
-            <Tabs defaultValue="posts" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="posts">Latest Updates</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews</TabsTrigger>
+            <Tabs defaultValue="posts" className="w-full space-y-6">
+              <TabsList className="inline-flex h-10 items-center justify-center rounded-md bg-gray-100/50 p-1 text-muted-foreground">
+                <TabsTrigger 
+                  value="posts" 
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:text-gray-900"
+                >
+                  Latest Updates
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="reviews"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 text-gray-900 data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-[0_2px_4px_rgba(0,0,0,0.1)] hover:text-gray-900"
+                >
+                  Reviews
+                </TabsTrigger>
               </TabsList>
-              <TabsContent value="posts" className="mt-6">
+              <TabsContent 
+                value="posts" 
+                className="mt-6 space-y-4"
+              >
                 <PostsSection 
                   posts={data.posts || []} 
                 />
               </TabsContent>
-              <TabsContent value="reviews" className="mt-6">
+              <TabsContent 
+                value="reviews" 
+                className="mt-6 space-y-4"
+              >
                 <ReviewSection 
                   reviews={data.reviews || []} 
                   listingId={data.listing_id || ''}
