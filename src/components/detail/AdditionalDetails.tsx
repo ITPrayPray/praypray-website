@@ -103,7 +103,7 @@ const OperatingHoursTable: React.FC<{ hours: OperatingHours[] }> = ({ hours }) =
               </TableCell>
               <TableCell className={cn(
                 "text-[14px]",
-                hour.is_closed ? "text-red-500" : "text-gray-700"
+                hour.is_closed ? "text-destructive" : ""
               )}>
                 {hour.is_closed ? "Closed" : `${hour.open_time} - ${hour.close_time}`}
               </TableCell>
@@ -194,16 +194,16 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5 text-primary" />
-          <h3 className="text-[14px] font-semibold text-gray-900">Services Offered</h3>
+          <h3 className="text-[14px] font-semibold">Services Offered</h3>
         </div>
         {loading ? (
-          <p className="text-[14px] text-gray-600">Loading services...</p>
+          <p className="text-[14px] text-muted-foreground">Loading services...</p>
         ) : error ? (
-          <p className="text-[14px] text-red-500">Error: {error}</p>
+          <p className="text-[14px] text-destructive">Error: {error}</p>
         ) : services.length > 0 ? (
           <ServiceTable services={services} />
         ) : (
-          <p className="text-[14px] text-gray-600">No services available</p>
+          <p className="text-[14px] text-muted-foreground">No services available</p>
         )}
       </div>
       
@@ -212,7 +212,7 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
-            <h3 className="text-[14px] font-semibold text-gray-900">Operating Hours</h3>
+            <h3 className="text-[14px] font-semibold">Operating Hours</h3>
           </div>
           <OperatingHoursTable hours={operatingHours} />
         </div>

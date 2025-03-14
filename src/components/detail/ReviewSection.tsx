@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Card, CardContent } from '../ui/card';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { StarRating } from './StarRating';
@@ -88,7 +87,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, listingId
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <MessageCircle className="h-6 w-6 text-primary" />
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">Reviews</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Reviews</h2>
           
           {reviews.length > 0 && (
             <div className="flex items-center gap-2 bg-gray-100 px-3 py-1 rounded-full">

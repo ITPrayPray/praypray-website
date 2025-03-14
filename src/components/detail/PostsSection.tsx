@@ -29,7 +29,7 @@ export const PostsSection: React.FC<PostsSectionProps> = ({ posts }) => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold text-gray-900">
+      <h2 className="text-2xl font-semibold">
         Latest Updates
       </h2>
       
@@ -40,16 +40,16 @@ export const PostsSection: React.FC<PostsSectionProps> = ({ posts }) => {
               <div className="space-y-4">
                 {/* Post Header */}
                 <div className="flex justify-between items-start">
-                  <h3 className="text-xl font-semibold text-gray-900">
+                  <h3 className="text-xl font-semibold">
                     {post.title}
                   </h3>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-muted-foreground">
                     {formatDate(post.created_at)}
                   </span>
                 </div>
 
                 {/* Post Content */}
-                <p className="text-gray-700 whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap">
                   {post.content}
                 </p>
               </div>
@@ -57,7 +57,7 @@ export const PostsSection: React.FC<PostsSectionProps> = ({ posts }) => {
           ))}
         </div>
       ) : (
-        <p className="text-gray-500 text-center py-8">
+        <p className="text-muted-foreground text-center py-8">
           No updates available yet.
         </p>
       )}

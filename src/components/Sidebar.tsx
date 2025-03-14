@@ -79,10 +79,10 @@ export default function Sidebar({
     >
       {/* 頂部部分 */}
       <div className="p-4 flex items-center justify-between border-b">
-        <h2 className="text-xl font-bold">拜拜 Pray Pray</h2>
+        <h2 className="text-xl font-bold text-primary">拜拜 Pray Pray</h2>
         {/* 顯示關閉按鈕 */}
         <button onClick={toggleSidebar} className="focus:outline-none">
-          <Menu className="w-6 h-6" />
+          <Menu className="w-6 h-6 text-primary" />
         </button>
       </div>
       {/* 選單項目 */}
