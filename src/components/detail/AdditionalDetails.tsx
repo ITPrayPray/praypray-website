@@ -43,12 +43,6 @@ interface AdditionalDetailsProps {
     };
   }>;
   operatingHours?: OperatingHours[];
-  contactInfo?: {
-    phone?: string;
-    whatsapp?: string;
-    email?: string;
-    website?: string;
-  };
 }
 
 /**
@@ -126,7 +120,6 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
   listingId,
   services: initialServices,
   operatingHours,
-  contactInfo,
 }) => {
   // 添加日誌來檢查數據
   console.log("AdditionalDetails Props:", {
@@ -217,7 +210,6 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
           <OperatingHoursTable hours={operatingHours} />
         </div>
       )}
-
     </div>
   );
 };

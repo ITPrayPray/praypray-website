@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { Heart, MapPin, Star } from 'lucide-react';
+import { Heart, MapPin, Star, Phone, Mail, Link, Facebook, Instagram, ImageIcon } from 'lucide-react';
 import { DetailData } from '../DetailPage';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 interface KeyInformationProps {
   name: string;
@@ -15,6 +16,14 @@ interface KeyInformationProps {
   religions?: DetailData['religions'];
   address?: string;
   state?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  facebook?: string;
+  instagram?: string;
+  whatsapp?: string;
+  icon?: string;
+  tag?: { tag_name: string; id: number };
 }
 
 /**
@@ -30,6 +39,14 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
   religions,
   address,
   state,
+  phone,
+  email,
+  website,
+  facebook,
+  instagram,
+  whatsapp,
+  icon,
+  tag,
 }) => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
@@ -61,10 +78,67 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
     }
   };
 
+  // Get tag badge color based on tag id
+  const getTagBadgeColor = (tagId?: number) => {
+    if (!tagId) return "primary";
+    switch (tagId) {
+      case 1: // TEMPLE
+        return "primary";
+      case 2: // PROSERVICE
+        return "violet";
+      default:
+        return "primary";
+    }
+  };
+
   return (
     <div className="rounded-xl">
+      {/* 添加數據日誌 */}
+      {console.log('KeyInformation props:', {
+        phone,
+        email
+      })}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="space-y-3 flex-1">
+          {/* Icon Image */}
+          <div className="mb-4">
+            {icon ? (
+              <div>
+                <Image
+                  src={icon}
+                  alt={`${name} icon`}
+                  width={64}
+                  height={64}
+                  className="rounded-lg object-cover"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <div className="w-16 h-16 rounded-lg border border-border flex items-center justify-center bg-muted/30">
+                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <span className="text-[12px] text-muted-foreground">
+                  待持有人提供 (To be provided by the listing owner)
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Tag Badge */}
+          {tag && (
+            <div className="mb-2">
+              <Badge 
+                variant="default" 
+                className={cn(
+                  "rounded-none text-[14px]",
+                  tag.id === 2 ? "bg-violet-500 hover:bg-violet-600" : ""
+                )}
+              >
+                {tag.tag_name}
+              </Badge>
+            </div>
+          )}
+
           {/* Type and Religion Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             {type && (
@@ -97,16 +171,41 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
           {/* Address Information */}
           {(address || state) && (
             <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+              <MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
               <span className="text-[14px]">
                 {[address, state].filter(Boolean).join(', ')}
               </span>
             </div>
           )}
+
+          {/* Phone Information */}
+          <div className="flex items-start gap-2">
+            <Phone className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+            <span className={cn("text-[14px]", !phone && "text-muted-foreground")}>
+              {phone || "待持有人提供 (To be provided by the listing owner)"}
+            </span>
+          </div>
+
+          {/* Email Information */}
+          <div className="flex items-start gap-2">
+            <Mail className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+            <span className={cn("text-[14px]", !email && "text-muted-foreground")}>
+              {email || "待持有人提供 (To be provided by the listing owner)"}
+            </span>
+          </div>
+
+          {/* Website Information */}
+          <div className="flex items-start gap-2">
+            <Link className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
+            <span className={cn("text-[14px]", !website && "text-muted-foreground")}>
+              {website || "待持有人提供 (To be provided by the listing owner)"}
+            </span>
+          </div>
         </div>
 
-        {/* Favorite Button with Animation */}
-        <div className="transition-transform duration-200 hover:scale-105">
+        {/* Favorite and Social Media Buttons */}
+        <div className="flex items-center gap-2">
+          {/* Favorite Button */}
           <Button
             onClick={toggleFavorite}
             variant={isFavorite ? "default" : "outline"}
@@ -125,6 +224,66 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
                 isFavorite ? "fill-current" : ""
               )}
             />
+          </Button>
+
+          {/* Facebook Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-8 w-8 flex-shrink-0 rounded-full",
+              !facebook && "opacity-50 cursor-not-allowed"
+            )}
+            asChild={!!facebook}
+            disabled={!facebook}
+          >
+            {facebook ? (
+              <a href={facebook} target="_blank" rel="noopener noreferrer">
+                <Facebook className="h-4 w-4" />
+              </a>
+            ) : (
+              <Facebook className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* Instagram Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-8 w-8 flex-shrink-0 rounded-full",
+              !instagram && "opacity-50 cursor-not-allowed"
+            )}
+            asChild={!!instagram}
+            disabled={!instagram}
+          >
+            {instagram ? (
+              <a href={`https://www.instagram.com/${instagram}`} target="_blank" rel="noopener noreferrer">
+                <Instagram className="h-4 w-4" />
+              </a>
+            ) : (
+              <Instagram className="h-4 w-4" />
+            )}
+          </Button>
+
+          {/* WhatsApp Button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className={cn(
+              "h-8 w-8 flex-shrink-0 rounded-full",
+              !whatsapp && "opacity-50 cursor-not-allowed"
+            )}
+            asChild={!!whatsapp}
+            disabled={!whatsapp}
+          >
+            {whatsapp ? (
+              <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer">
+                <Phone className="h-4 w-4" />
+              </a>
+            ) : (
+              <Phone className="h-4 w-4" />
+            )}
           </Button>
         </div>
       </div>

@@ -17,6 +17,7 @@ export async function GET(
     console.log(`ID type: ${typeof id}, value: ${id}`);
 
     // 第一階段：查詢 listings 的基本資料（不包含服務資訊）
+    console.log('Querying listing with ID:', id);
     const { data: listingData, error: listingError } = await supabase
       .from('listings')
       .select(`
@@ -26,6 +27,14 @@ export async function GET(
         description,
         lat,
         lng,
+        phone,
+        email,
+        website,
+        facebook,
+        instagram,
+        whatsapp,
+        icon,
+        google_map_link,
         state:state_id(state_name),
         religions:listing_religions(
           religion:religion_id(religion_name)
@@ -33,11 +42,21 @@ export async function GET(
         gods:listing_gods(
           god:god_id(god_name)
         ),
-        tag:tag_id(tag_name),
+        tag:tag_id(
+          tag_name,
+          id
+        ),
         opening_hours
       `)
       .eq('listing_id', id)
       .single();
+
+    // 添加原始查詢結果日誌
+    console.log('Raw database response:', {
+      error: listingError,
+      data: listingData,
+      requestedId: id
+    });
 
     if (listingError) {
       console.error('Error fetching listing detail:', listingError);
@@ -46,6 +65,15 @@ export async function GET(
         { status: 500 }
       );
     }
+
+    // 添加詳細的數據日誌
+    console.log('Raw listing data:', {
+      id,
+      phone: listingData?.phone,
+      email: listingData?.email,
+      google_map_link: listingData?.google_map_link,
+      fullData: listingData
+    });
 
     // 第二階段：分開查詢 listing_services 與 service 資料
     const { data: servicesData, error: servicesError } = await supabase

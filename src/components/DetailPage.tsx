@@ -28,11 +28,13 @@ export interface DetailData {
   address?: string;
   lat?: number;
   lng?: number;
+  google_map_link?: string;
   state?: { state_name: string };
   services?: Array<{ service: { service_name: string; service_description?: string } }>;
   religions?: Array<{ religion: { religion_name: string } }>;
   gods?: Array<{ god: { god_name: string; god_description?: string } }>;
-  tag?: { tag_name: string };
+  tag?: { tag_name: string; id: number };
+  icon?: string;
   opening_hours?: Record<string, string>;
   reviews?: Array<{
     id: string;
@@ -51,6 +53,8 @@ export interface DetailData {
     user_id: string;
     listing_id: string;
   }>;
+  facebook?: string;
+  instagram?: string;
 }
 
 // 定義我們需要在前端顯示的營業時間結構
@@ -192,6 +196,12 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
 
           {/* Key Information */}
           <section id={sectionIds.info} className="mb-10" aria-label="Listing information">
+            {/* 添加數據日誌 */}
+            {console.log('DetailPage data:', {
+              phone: data.phone,
+              email: data.email,
+              fullData: data
+            })}
             <KeyInformation 
               name={data.listing_name}
               type={data.listing_type}
@@ -200,6 +210,14 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
               religions={data.religions}
               address={data.address || data.location}
               state={data.state?.state_name}
+              phone={data.phone}
+              email={data.email}
+              website={data.website}
+              facebook={data.facebook}
+              instagram={data.instagram}
+              whatsapp={data.whatsapp}
+              icon={data.icon}
+              tag={data.tag}
             />
           </section>
 
@@ -226,12 +244,13 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
             {/* Map Section */}
             {(data.lat && data.lng) && (
               <section id={sectionIds.location} className="mb-10 md:mb-0" aria-label="Location">
-                <div className="rounded-xl overflow-hidden shadow-sm border border-border h-[300px] md:h-[350px] lg:h-[400px]">
+                {/* Map Container - No fixed height on outer container */}
+                <div className="flex flex-col space-y-4">
+                  {/* Map Container - Fixed height only on map container */}
                   <LocationMap 
-                    lat={data.lat} 
-                    lng={data.lng} 
-                    name={data.listing_name}
-                    address={data.address || data.location || ''}
+                    lat={data.lat!} 
+                    lng={data.lng!}
+                    google_map_link={data.google_map_link}
                   />
                 </div>
               </section>
