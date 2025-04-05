@@ -7,6 +7,7 @@ import {
   useReactTable,
   getSortedRowModel,
   SortingState,
+  ColumnDef,
 } from '@tanstack/react-table';
 
 import {
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/table';
 
 interface DataTableProps<TData> {
-  columns: any;
+  columns: ColumnDef<TData, string>[];
   data: TData[];
 }
 

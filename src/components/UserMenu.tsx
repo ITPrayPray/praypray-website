@@ -3,6 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
+import { Session } from "@supabase/supabase-js";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import AuthDialog from "@/components/AuthDialog";
@@ -15,7 +16,7 @@ import {
 import { useRouter } from "next/navigation";
 
 export default function UserMenu() {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const router = useRouter();
 

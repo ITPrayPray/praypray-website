@@ -78,26 +78,15 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
     }
   };
 
-  // Get tag badge color based on tag id
-  const getTagBadgeColor = (tagId?: number) => {
-    if (!tagId) return "primary";
-    switch (tagId) {
-      case 1: // TEMPLE
-        return "primary";
-      case 2: // PROSERVICE
-        return "violet";
-      default:
-        return "primary";
-    }
-  };
-
   return (
     <div className="rounded-xl">
-      {/* 添加數據日誌 */}
-      {console.log('KeyInformation props:', {
-        phone,
-        email
-      })}
+      {(() => {
+        console.log('KeyInformation props:', {
+          phone,
+          email
+        });
+        return null;
+      })()}
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="space-y-3 flex-1">
           {/* Icon Image */}
@@ -128,11 +117,8 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
           {tag && (
             <div className="mb-2">
               <Badge 
-                variant="default" 
-                className={cn(
-                  "rounded-none text-[14px]",
-                  tag.id === 2 ? "bg-violet-500 hover:bg-violet-600" : ""
-                )}
+                variant="default"
+                className="rounded-none text-[14px]"
               >
                 {tag.tag_name}
               </Badge>

@@ -28,7 +28,7 @@ export default function AuthDialog({
 
   const handleAuth = async () => {
     if (isLogin) {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -39,7 +39,7 @@ export default function AuthDialog({
         router.refresh();
       }
     } else {
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
       });
@@ -60,34 +60,34 @@ export default function AuthDialog({
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="email">邮箱</Label>
+            <Label htmlFor="email">email</Label>
             <Input
               id="email"
               type="email"
-              placeholder="请输入邮箱"
+              placeholder="請輸入email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div>
-            <Label htmlFor="password">密码</Label>
+            <Label htmlFor="password">password</Label>
             <Input
               id="password"
               type="password"
-              placeholder="请输入密码"
+              placeholder="請輸入password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
           <Button onClick={handleAuth} className="w-full">
-            {isLogin ? "登录" : "注册"}
+            {isLogin ? "登入" : "注册"}
           </Button>
           <Button
             variant="link"
             onClick={() => setIsLogin(!isLogin)}
             className="w-full"
           >
-            {isLogin ? "没有账号？注册" : "已有账号？登录"}
+            {isLogin ? "未有Account？注册" : "已有Account？登入"}
           </Button>
         </div>
       </DialogContent>

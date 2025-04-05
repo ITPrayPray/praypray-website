@@ -43,6 +43,12 @@ interface AdditionalDetailsProps {
     };
   }>;
   operatingHours?: OperatingHours[];
+  contactInfo?: {
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    website?: string;
+  };
 }
 
 /**
@@ -157,7 +163,8 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
               price,
               custom_description,
               service:fk_listing_services_service (
-                service_name
+                service_name,
+                service_description
               )
             `)
             .eq('listing_id', listingId);
@@ -166,7 +173,16 @@ export const AdditionalDetails: React.FC<AdditionalDetailsProps> = ({
             console.error("Error fetching services:", error);
             setError(error.message);
           } else {
-            setServices(data as Service[]);
+            const formattedData = data.map(item => ({
+              id: item.id,
+              price: item.price,
+              custom_description: item.custom_description,
+              service: {
+                service_name: item.service[0].service_name,
+                service_description: item.service[0].service_description
+              }
+            }));
+            setServices(formattedData);
           }
         } catch (err) {
           console.error("Exception fetching services:", err);

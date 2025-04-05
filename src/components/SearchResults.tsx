@@ -3,8 +3,9 @@
 import React from 'react';
 import { DataTable } from '@/components/DataTable';
 import { columns } from '@/components/columns';
+import { ColumnDef } from '@tanstack/react-table';
 
-interface Listing {
+export interface Listing {
   listing_id: string;
   listing_name: string;
   location: string;
@@ -22,7 +23,7 @@ interface SearchResultsProps {
 export default function SearchResults({ results }: SearchResultsProps) {
   return (
     <div className="mt-8">
-      <DataTable columns={columns} data={results} />
+      <DataTable columns={columns as ColumnDef<Listing, string>[]} data={results} />
     </div>
   );
 }

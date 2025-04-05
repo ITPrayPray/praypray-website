@@ -11,10 +11,13 @@ interface Listing {
   listing_name: string;
   lat: number;
   lng: number;
-  location?: string;
-  description?: string;
-  gods?: Array<{god: {god_name: string}}>;
+  location: string;
+  description: string;
+  gods: Array<{god: {god_name: string}}> | null;
   image_urls?: string[];
+  state: { state_name: string } | null;
+  services: Array<{ service: { service_name: string } }> | null;
+  religions: Array<{ religion: { religion_name: string } }> | null;
 }
 
 export default function Home() {
@@ -41,12 +44,12 @@ export default function Home() {
               listing_name: listing.listing_name,
               location: listing.location || '',
               listing_id: listing.listing_id,
-              gods: listing.gods?.map((g: any) => g.god?.god_name).join(', ') || '',
+              gods: listing.gods?.map((g: { god: { god_name: string } }) => g.god?.god_name).join(', ') || '',
               image_urls: listing.image_urls || []
             };
           })}
         />
-        <SearchResults results={searchResults} />
+        <SearchResults results={searchResults as Listing[]} />
       </main>
 
       <footer className="mt-16 text-center">

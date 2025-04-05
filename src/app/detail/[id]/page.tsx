@@ -42,12 +42,20 @@ export default async function Page({ params }: { params: { id: string } }) {
     console.log("Detail page for ID:", params.id);
     const data = await fetchDetail(params.id);
 
-    // 若 data.operating_hours 存在，使用它
-    const operatingHours: OperatingHour[] = data.operating_hours || [];
+    // 將 opening_hours 轉換為 OperatingHour 類型
+    const operatingHours: OperatingHour[] = data.opening_hours ? Object.entries(data.opening_hours).map(([day, hours]) => {
+      const [open_time, close_time] = hours.split('-');
+      return {
+        day,
+        open_time: open_time.trim(),
+        close_time: close_time.trim(),
+        is_closed: false
+      };
+    }) : [];
     
     // 添加日誌來檢查數據
     console.log("Operating Hours Data:", {
-      fromAPI: data.operating_hours,
+      fromAPI: data.opening_hours,
       processed: operatingHours
     });
 

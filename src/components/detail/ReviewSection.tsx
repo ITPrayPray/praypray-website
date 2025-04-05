@@ -6,7 +6,7 @@ import { Textarea } from '../ui/textarea';
 import { StarRating } from './StarRating';
 import { DetailData } from '../DetailPage';
 import { formatDistanceToNow } from 'date-fns';
-import { PlusCircle, Send, MessageCircle, User } from 'lucide-react';
+import { PlusCircle, Send, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 
@@ -19,7 +19,7 @@ interface ReviewSectionProps {
  * ReviewSection - Social media post-like display of user reviews with the ability to add new ones
  * Features responsive design, user avatars, and interactive rating selection
  */
-export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, listingId }) => {
+export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews = [], listingId }) => {
   const [isAddingReview, setIsAddingReview] = useState(false);
   const [newReviewComment, setNewReviewComment] = useState('');
   const [newReviewRating, setNewReviewRating] = useState(0);
@@ -41,18 +41,15 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, listingId
     
     try {
       // In a real application, you would implement this with your API
-      // await fetch('/api/reviews', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     listing_id: listingId,
-      //     rating: newReviewRating,
-      //     comment: newReviewComment
-      //   })
-      // });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          listing_id: listingId,
+          rating: newReviewRating,
+          comment: newReviewComment
+        })
+      });
       
       // Reset form and close it
       setNewReviewComment('');
@@ -182,9 +179,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ reviews, listingId
                       className="object-cover"
                     />
                   ) : (
-                    <div className="bg-primary/10 h-full w-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
-                    </div>
+                    <Image
+                      src={`${defaultAvatar}${encodeURIComponent(review.user_name)}`}
+                      alt={`${review.user_name}'s avatar`}
+                      fill
+                      className="object-cover"
+                    />
                   )}
                 </div>
                 

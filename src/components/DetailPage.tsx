@@ -65,33 +65,11 @@ interface OperatingHour {
   is_closed: boolean;
 }
 
-// 將 JSONB 格式的 opening_hours 轉成陣列
-function parseOpeningHours(openingHoursObj: Record<string, string>): OperatingHour[] {
-  return Object.entries(openingHoursObj).map(([dayKey, value]) => {
-    const lowerVal = value.toLowerCase();
-    if (lowerVal === 'closed') {
-      return {
-        day: dayKey,
-        open_time: '',
-        close_time: '',
-        is_closed: true,
-      };
-    } else {
-      // 假設格式為 "9:00-16:00"
-      const [open, close] = value.split('-');
-      return {
-        day: dayKey,
-        open_time: open.trim(),
-        close_time: close.trim(),
-        is_closed: false,
-      };
-    }
-  });
-}
 interface DetailPageProps {
   data?: DetailData;
   isLoading?: boolean;
   error?: Error | null;
+  operatingHours?: OperatingHour[];
 }
 
 /**
@@ -139,7 +117,7 @@ const DetailPageSkeleton = () => (
  * Main DetailPage component that displays comprehensive information about a listing
  * Optimized for responsive design and follows accessibility best practices
  */
-const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
+const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error, operatingHours }) => {
   if (isLoading) {
     return <DetailPageSkeleton />;
   }
@@ -152,11 +130,6 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
     return <ErrorDisplay message="No listing data found" />;
   }
 
-  // 1. 準備一個解析後的陣列
-  let operatingHoursArray: OperatingHour[] = [];
-  if (data.opening_hours) {
-    operatingHoursArray = parseOpeningHours(data.opening_hours);
-  }
   // Define section IDs for navigation/anchors
   const sectionIds = {
     info: 'listing-info',
@@ -196,12 +169,14 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
 
           {/* Key Information */}
           <section id={sectionIds.info} className="mb-10" aria-label="Listing information">
-            {/* 添加數據日誌 */}
-            {console.log('DetailPage data:', {
-              phone: data.phone,
-              email: data.email,
-              fullData: data
-            })}
+            {(() => {
+              console.log('DetailPage data:', {
+                phone: data.phone,
+                email: data.email,
+                fullData: data
+              });
+              return null;
+            })()}
             <KeyInformation 
               name={data.listing_name}
               type={data.listing_type}
@@ -231,7 +206,7 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error }) => {
             >
               <AdditionalDetails 
                 services={data.services}
-                operatingHours={operatingHoursArray} // 2. 傳入解析後的陣列
+                operatingHours={operatingHours || []}
                 contactInfo={{
                   phone: data.phone,
                   whatsapp: data.whatsapp,

@@ -7,6 +7,7 @@ import { MapPin } from "lucide-react";
 import Slider from "react-slick";
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
@@ -66,7 +67,6 @@ function GoogleMapComponent({
   const mapRef = useRef<google.maps.Map | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const mapContainerRef = useRef<HTMLDivElement>(null);
-  const [mapWidth, setMapWidth] = useState<number>(0);
 
   const onLoad = useCallback(function callback(map: google.maps.Map) {
     mapRef.current = map;
@@ -87,25 +87,9 @@ function GoogleMapComponent({
     speed: 500,
     slidesToShow: 1,
     slidesToScroll: 1,
-    lazyLoad: 'ondemand',
+    lazyLoad: 'ondemand' as const,
     arrows: false, // 隐藏左右箭头
   };
-
-  useEffect(() => {
-    const updateMapWidth = () => {
-      if (mapContainerRef.current) {
-        setMapWidth(mapContainerRef.current.offsetWidth);
-      }
-    };
-
-    updateMapWidth();
-
-    window.addEventListener('resize', updateMapWidth);
-
-    return () => {
-      window.removeEventListener('resize', updateMapWidth);
-    };
-  }, []);
 
   // Check if the Google object is available
   useEffect(() => {
@@ -159,7 +143,7 @@ function GoogleMapComponent({
                       ? "#FFD700"
                       : "#000000"
                   ),
-                  scaledSize: { width: 24, height: 24 },
+                  scaledSize: new google.maps.Size(24, 24),
                 }}
                 onClick={() => {
                   setSelectedMarker(marker);
@@ -187,10 +171,12 @@ function GoogleMapComponent({
                         <Slider {...sliderSettings}>
                           {selectedMarker.image_urls.map((url, index) => (
                             <div key={index}>
-                              <img
+                              <Image
                                 src={url}
                                 alt={`Image ${index + 1}`}
                                 className="w-full h-24 sm:h-32 md:h-32 lg:h-40 object-cover"
+                                width={400}
+                                height={300}
                                 loading="lazy"
                               />
                             </div>

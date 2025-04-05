@@ -17,12 +17,16 @@ import {
 } from '@/components/ui/command';
 
 interface listing {
-  id: string;
+  listing_id: string;
   listing_name: string;
   location: string;
   description: string;
   lat: number;
   lng: number;
+  state: { state_name: string } | null;
+  services: Array<{ service: { service_name: string } }> | null;
+  gods: Array<{god: {god_name: string}}> | null;
+  religions: Array<{ religion: { religion_name: string } }> | null;
 }
 
 interface SearchBarProps {
@@ -159,7 +163,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   }, []);
 
   // 辅助函数：截取描述文本
-  const truncateDescription = (description: any, charLimit: number) => {
+  const truncateDescription = (description: string | object | null, charLimit: number) => {
     let descText = '';
     if (typeof description === 'string') {
       descText = description;
@@ -236,7 +240,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
                 const index = searchHistory.length + idx;
                 return (
                   <CommandItem
-                    key={listing.id}
+                    key={listing.listing_id}
                     onSelect={() => {
                       setQuery(listing.listing_name);
                       handleSearch(listing.listing_name);
