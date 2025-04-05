@@ -45,10 +45,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(data, { status: 200 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in API route:', error);
     return NextResponse.json(
-      { error: 'Server error', details: error.message },
+      { error: 'Server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

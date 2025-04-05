@@ -145,10 +145,10 @@ export async function GET(
 
     console.log('Found combined listing data:', combinedData);
     return NextResponse.json(combinedData, { status: 200 });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Error in detail API route:', err);
     return NextResponse.json(
-      { error: 'Server error', details: err.message },
+      { error: 'Server error', details: err instanceof Error ? err.message : 'Unknown error' },
       { status: 500 }
     );
   }
