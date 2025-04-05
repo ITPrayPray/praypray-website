@@ -30,20 +30,20 @@ export const sampleDetailData: DetailData = {
     { god: { god_name: "Buddha", god_description: "The enlightened one who teaches the path to spiritual liberation." } },
     { god: { god_name: "Kwan Yin", god_description: "Goddess of mercy and compassion." } }
   ],
-  tag: { tag_name: "Meditation" },
+  tag: { tag_name: "Meditation", id: 1 },
   phone: "+81 75-123-4567",
   whatsapp: "+81751234567",
   email: "contact@goldentemple.jp",
   website: "www.goldentemple.jp",
-  operating_hours: [
-    { day: "monday", open_time: "09:00", close_time: "18:00", is_closed: false },
-    { day: "tuesday", open_time: "09:00", close_time: "18:00", is_closed: false },
-    { day: "wednesday", open_time: "09:00", close_time: "18:00", is_closed: false },
-    { day: "thursday", open_time: "09:00", close_time: "18:00", is_closed: false },
-    { day: "friday", open_time: "09:00", close_time: "18:00", is_closed: false },
-    { day: "saturday", open_time: "10:00", close_time: "16:00", is_closed: false },
-    { day: "sunday", open_time: "00:00", close_time: "00:00", is_closed: true }
-  ],
+  opening_hours: {
+    monday: "09:00-18:00",
+    tuesday: "09:00-18:00",
+    wednesday: "09:00-18:00",
+    thursday: "09:00-18:00",
+    friday: "09:00-18:00",
+    saturday: "10:00-16:00",
+    sunday: "Closed"
+  },
   reviews: [
     {
       id: "rev1",
@@ -98,20 +98,20 @@ export const sampleProfessionalServiceData: DetailData = {
   gods: [
     { god: { god_name: "Guan Gong", god_description: "God of war, wealth, and protection." } }
   ],
-  tag: { tag_name: "Healing" },
+  tag: { tag_name: "Healing", id: 2 },
   phone: "+886 2-2345-6789",
   whatsapp: "+886223456789",
   email: "info@harmonyservices.tw",
   website: "www.harmonyservices.tw",
-  operating_hours: [
-    { day: "Monday", open_time: "10:00 AM", close_time: "6:00 PM", is_closed: false },
-    { day: "Tuesday", open_time: "10:00 AM", close_time: "6:00 PM", is_closed: false },
-    { day: "Wednesday", open_time: "10:00 AM", close_time: "6:00 PM", is_closed: false },
-    { day: "Thursday", open_time: "10:00 AM", close_time: "6:00 PM", is_closed: false },
-    { day: "Friday", open_time: "10:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Saturday", open_time: "10:00 AM", close_time: "8:00 PM", is_closed: false },
-    { day: "Sunday", open_time: "", close_time: "", is_closed: true }
-  ],
+  opening_hours: {
+    monday: "10:00 AM-6:00 PM",
+    tuesday: "10:00 AM-6:00 PM",
+    wednesday: "10:00 AM-6:00 PM",
+    thursday: "10:00 AM-6:00 PM",
+    friday: "10:00 AM-8:00 PM",
+    saturday: "10:00 AM-8:00 PM",
+    sunday: "Closed"
+  },
   reviews: [
     {
       id: "rev4",
