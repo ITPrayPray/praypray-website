@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import SearchBar from '@/components/SearchBar';
 import SearchResults from '@/components/SearchResults';
 import GoogleMapComponent from '@/components/GoogleMapComponent';
-
+import { useRouter } from 'next/navigation';
 
 interface Listing {
   listing_id: string;
@@ -22,10 +22,23 @@ interface Listing {
 
 export default function Home() {
   const [searchResults, setSearchResults] = useState<Listing[]>([]);
+  const router = useRouter();
 
-  const handleSearch = (results: Listing[]) => {
-    setSearchResults(results);
+  // Simplified navigation handler
+  const handleViewDetails = (listingId: string) => {
+    console.log('Navigating to details from Home:', listingId);
+    // Minimal delay before navigation
+    setTimeout(() => {
+      router.push(`/detail/${listingId}`);
+    }, 50);
   };
+
+  // Basic cleanup on unmount (primarily for debugging)
+  useEffect(() => {
+    return () => {
+      console.log('Home component unmounting');
+    };
+  }, []);
 
   return (
     <div className="min-h-screen p-8">
@@ -34,22 +47,25 @@ export default function Home() {
       </header>
 
       <main className="mt-8">
-        <SearchBar onSearch={handleSearch} />
+        <SearchBar onSearchResults={setSearchResults} />
+        
+        {/* Map is always rendered now */}
         <GoogleMapComponent
-          markers={searchResults.map((listing) => {
-            console.log('Processing listing for map:', listing);
-            return {
-              lat: listing.lat,
-              lng: listing.lng,
-              listing_name: listing.listing_name,
-              location: listing.location || '',
-              listing_id: listing.listing_id,
-              gods: listing.gods?.map((g: { god: { god_name: string } }) => g.god?.god_name).join(', ') || '',
-              image_urls: listing.image_urls || []
-            };
-          })}
+          markers={searchResults.map((listing) => ({
+            lat: listing.lat,
+            lng: listing.lng,
+            listing_name: listing.listing_name,
+            location: listing.location || '',
+            listing_id: listing.listing_id,
+            gods: listing.gods?.map((g) => g.god?.god_name).join(', ') || '',
+            image_urls: listing.image_urls || []
+          }))}
         />
-        <SearchResults results={searchResults as Listing[]} />
+        
+        <SearchResults 
+          results={searchResults as Listing[]} 
+          onSelectResult={handleViewDetails}
+        />
       </main>
 
       <footer className="mt-16 text-center">

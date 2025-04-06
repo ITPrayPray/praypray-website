@@ -30,10 +30,10 @@ interface listing {
 }
 
 interface SearchBarProps {
-  onSearch: (results: listing[]) => void;
+  onSearchResults: (results: listing[]) => void;
 }
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+export default function SearchBar({ onSearchResults }: SearchBarProps) {
   const [query, setQuery] = useState<string>('');
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -67,7 +67,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         console.log('First listing ID value:', response.data[0].listing_id);
       }
       
-      onSearch(response.data);
+      onSearchResults(response.data);
 
       setSearchHistory((prevHistory) => {
         const updatedHistory = [

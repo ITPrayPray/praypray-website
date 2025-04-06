@@ -18,12 +18,17 @@ export interface Listing {
 
 interface SearchResultsProps {
   results: Listing[];
+  onSelectResult?: (listingId: string) => void;
 }
 
-export default function SearchResults({ results }: SearchResultsProps) {
+export default function SearchResults({ results, onSelectResult }: SearchResultsProps) {
   return (
     <div className="mt-8">
-      <DataTable columns={columns as ColumnDef<Listing, string>[]} data={results} />
+      <DataTable 
+        columns={columns as ColumnDef<Listing, string>[]} 
+        data={results} 
+        onRowClick={onSelectResult ? (row) => onSelectResult(row.listing_id) : undefined}
+      />
     </div>
   );
 }
