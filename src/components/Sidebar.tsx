@@ -56,9 +56,11 @@ export default function Sidebar({
 
   // 定義判斷當前選單項目是否 active 的邏輯
   const isActive = (itemHref: string) => {
-    if (itemHref === '/detail') {
-      return pathname.startsWith('/detail');
+    // 對於特定需要父路徑高亮的項目，使用 startsWith
+    if (itemHref === '/detail' || itemHref === '/analytics') {
+      return pathname.startsWith(itemHref);
     }
+    // 其他項目要求完全匹配
     return pathname === itemHref;
   };
 
