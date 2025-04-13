@@ -15,13 +15,6 @@ interface Post {
   listing_id: string;
 }
 
-interface OperatingHour {
-  day: string;
-  open_time: string;
-  close_time: string;
-  is_closed: boolean;
-}
-
 // Initialize Supabase client directly here for server-side fetching
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -53,6 +46,7 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
         facebook,
         instagram,
         whatsapp,
+        xiaohongshu,
         icon,
         google_map_link,
         image_urls,
@@ -201,9 +195,10 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
       reviews: [], // Placeholder for reviews
       facebook: listingData.facebook,
       instagram: listingData.instagram,
+      xiaohongshu: listingData.xiaohongshu,
     };
 
-    console.log("Received data directly (WITH lat/lng):", combinedData);
+    console.log("Received data directly (WITH lat/lng/xiaohongshu):", combinedData);
     return combinedData; // No cast needed if type matches
 
   } catch (error) {
@@ -212,43 +207,55 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
   }
 }
 
-// Page component now uses fetchDetailDirectly
+// Page component
 export default async function Page({ params }: { params: { id: string } }) {
   try {
     console.log("Detail page for ID:", params.id);
-    // Call the direct fetching function
     const data = await fetchDetailDirectly(params.id);
 
-    // Keep the opening hours processing logic
-    const operatingHours: OperatingHour[] = data.opening_hours ? Object.entries(data.opening_hours).map(([day, hours]) => {
-       // Add safety check for hours format
-      if (typeof hours !== 'string' || !hours.includes('-')) {
-        console.warn(`Invalid opening hours format for day ${day}: ${hours}`);
-        return {
-          day,
-          open_time: '',
-          close_time: '',
-          is_closed: true // Assume closed if format is wrong
-        };
-      }
-      const [open_time, close_time] = hours.split('-');
-      return {
-        day,
-        open_time: open_time.trim(),
-        close_time: close_time.trim(),
-        is_closed: false
-      };
-    }) : [];
-    
-    console.log("Operating Hours Data:", {
-      fromAPI: data.opening_hours,
-      processed: operatingHours
-    });
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
+    // Normalize keys from DB data to lowercase for consistent lookup
+    const normalizedHours: Record<string, string> | null = data.opening_hours 
+      ? Object.entries(data.opening_hours).reduce((acc, [key, value]) => {
+          acc[key.toLowerCase()] = value; // Assuming value is the time string or null/undefined
+          return acc;
+        }, {} as Record<string, string>)
+      : null;
+
+    // Reconstruct the full week, marking days as closed if not found in DB data
+    const operatingHours = dayOrder.map(day => {
+      const dayLowercase = day.toLowerCase();
+      const hoursString = normalizedHours?.[dayLowercase]; // Lookup using lowercase key
+
+      if (hoursString && typeof hoursString === 'string' && hoursString.includes('-')) {
+        const [open_time, close_time] = hoursString.split('-');
+        return {
+          day, // Keep original case for display
+          open_time: open_time.trim(),
+          close_time: close_time.trim(),
+          is_closed: false
+        };
+      } else {
+         // If key doesn't exist in normalizedHours or value is invalid, mark as closed
+         if (hoursString) { // Log if key existed but value was bad
+            console.warn(`Invalid opening hours format for day ${day}: ${hoursString}`);
+         }
+         return {
+           day,
+           open_time: '',
+           close_time: '',
+           is_closed: true 
+         };
+      }
+    });
+    
+    console.log("Reconstructed Operating Hours Data:", operatingHours);
+
+    // Pass the reconstructed and ordered data to DetailPage
     return <DetailPage data={data} operatingHours={operatingHours} />;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    // Pass the specific error message to ErrorDisplay
     return <ErrorDisplay message={`獲取資料失敗: ${errorMessage}`} />;
   }
 }

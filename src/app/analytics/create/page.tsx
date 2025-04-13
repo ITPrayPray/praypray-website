@@ -25,7 +25,7 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { UploadCloud, Check, ChevronsUpDown, Loader2, X, Trash2 } from 'lucide-react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/client';
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -81,15 +81,6 @@ interface SelectedService extends Service {
   custom_description: string;
 }
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error("Supabase URL or Anon Key is missing. Make sure they are set in your .env.local file.");
-}
-
-const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
-
 const initialState = {
   success: false,
   message: '',
@@ -106,6 +97,7 @@ function SubmitButton() {
 }
 
 export default function CreateListingPage() {
+  const supabase = createClient();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -117,6 +109,7 @@ export default function CreateListingPage() {
   const [facebook, setFacebook] = useState('');
   const [instagram, setInstagram] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const [xiaohongshu, setXiaohongshu] = useState('');
   const [iconFile, setIconFile] = useState<File | null>(null);
   const [iconPreview, setIconPreview] = useState<string | null>(null);
   const [googleMapLink, setGoogleMapLink] = useState('');
@@ -158,9 +151,12 @@ export default function CreateListingPage() {
   };
   const [dailyHours, setDailyHours] = useState<Record<string, DayHours>>(initialDailyHours);
 
+  // Determine if TEMPLE or PROSERVICE is selected
+  const isTemple = tagId === '1';
+  const isProservice = tagId === '2';
+
   useEffect(() => {
     const fetchRegions = async () => {
-      if (!supabase) return;
       setIsLoadingRegions(true);
       try {
         const { data, error } = await supabase
@@ -179,11 +175,11 @@ export default function CreateListingPage() {
       }
     };
     fetchRegions();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const fetchStatesForRegion = async () => {
-      if (!supabase || !selectedRegionId) {
+      if (!selectedRegionId) {
         setStates([]);
         return;
       }
@@ -211,11 +207,10 @@ export default function CreateListingPage() {
     };
 
     fetchStatesForRegion();
-  }, [selectedRegionId]);
+  }, [selectedRegionId, supabase]);
 
   useEffect(() => {
     const fetchReligions = async () => {
-      if (!supabase) return;
       setIsLoadingReligions(true);
       try {
         const { data, error } = await supabase
@@ -234,11 +229,10 @@ export default function CreateListingPage() {
       }
     };
     fetchReligions();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const fetchGods = async () => {
-      if (!supabase) return;
       setIsLoadingGods(true);
       try {
         const { data, error } = await supabase
@@ -257,11 +251,10 @@ export default function CreateListingPage() {
       }
     };
     fetchGods();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     const fetchServices = async () => {
-      if (!supabase) return;
       setIsLoadingServices(true);
       try {
         // Fetch only id and name initially
@@ -281,7 +274,7 @@ export default function CreateListingPage() {
       }
     };
     fetchServices();
-  }, []);
+  }, [supabase]);
 
   const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -464,18 +457,18 @@ export default function CreateListingPage() {
                   className="flex flex-wrap gap-2 justify-start"
                   aria-required="true"
               >
-                  <ToggleGroupItem key="1" value="1" aria-label="Select TEMPLE">
+                  <ToggleGroupItem key="1" value="1" aria-label="Select TEMPLE" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                       TEMPLE
                   </ToggleGroupItem>
-                  <ToggleGroupItem key="2" value="2" aria-label="Select PROSERVICE">
+                  <ToggleGroupItem key="2" value="2" aria-label="Select PROSERVICE" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
                       PROSERVICE
                   </ToggleGroupItem>
               </ToggleGroup>
               <input type="hidden" name="tagId" value={tagId} />
-              <p className="text-sm text-muted-foreground">請選擇列表類型。(Please select a listing type.)</p>
+              <p className="text-sm text-muted-foreground">請選擇列表類型。</p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="name">名稱 (Name)</Label>
+              <Label htmlFor="name">名稱 (Name) <span className="text-red-500">*</span></Label>
               <Input
                 id="name"
                 name="name"
@@ -486,7 +479,7 @@ export default function CreateListingPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">描述 (Description)</Label>
+              <Label htmlFor="description">描述 (Description) <span className="text-red-500">*</span></Label>
               <Textarea
                 id="description"
                 name="description"
@@ -499,7 +492,7 @@ export default function CreateListingPage() {
             </div>
             <h3 className="text-lg font-medium border-t pt-4">宗教與神祇 (Religions & Gods)</h3>
             <div className="space-y-2">
-              <Label>宗教 (Religions)</Label>
+              <Label>宗教 (Religions) <span className="text-red-500">*</span></Label>
               {isLoadingReligions ? (
                   <p className="text-sm text-muted-foreground">載入宗教中... (Loading religions...)</p>
               ) : (
@@ -512,7 +505,12 @@ export default function CreateListingPage() {
                       className="flex flex-wrap gap-2 justify-start"
                   >
                       {allReligions.map((religion) => (
-                          <ToggleGroupItem key={religion.religion_id} value={religion.religion_id} aria-label={`Select ${religion.religion_name}`}>
+                          <ToggleGroupItem 
+                              key={religion.religion_id} 
+                              value={religion.religion_id} 
+                              aria-label={`Select ${religion.religion_name}`}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                          >
                               {religion.religion_name}
                           </ToggleGroupItem>
                       ))}
@@ -521,7 +519,7 @@ export default function CreateListingPage() {
               <input type="hidden" name="religionIds" value={selectedReligionIds.join(',')} />
             </div>
             <div className="space-y-2">
-              <Label>主要神祇 (Main Gods)</Label>
+              <Label>主要神祇 (Main Gods) {isTemple && <span className="text-red-500">*</span>}</Label>
               <Popover open={isGodComboboxOpen} onOpenChange={setIsGodComboboxOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -592,17 +590,18 @@ export default function CreateListingPage() {
             </div>
             <h3 className="text-lg font-medium border-t pt-4">地點與聯絡方式 (Location & Contact)</h3>
             <div className="space-y-2">
-              <Label htmlFor="location">地點 (Location)</Label>
+              <Label htmlFor="location">地點 (Location) <span className="text-red-500">*</span></Label>
               <Input
                 id="location"
                 name="location"
                 placeholder="輸入完整地址 (Enter full address)"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label>區域 (Region)</Label>
+              <Label>區域 (Region) <span className="text-red-500">*</span></Label>
               {isLoadingRegions ? (
                   <p className="text-sm text-muted-foreground">載入區域中... (Loading regions...)</p>
               ) : (
@@ -615,7 +614,12 @@ export default function CreateListingPage() {
                       className="flex flex-wrap gap-2 justify-start"
                   >
                       {regionsList.map((region) => (
-                          <ToggleGroupItem key={region.region_id} value={region.region_id} aria-label={`Select ${region.region_name}`}>
+                          <ToggleGroupItem 
+                              key={region.region_id} 
+                              value={region.region_id} 
+                              aria-label={`Select ${region.region_name}`}
+                              className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                          >
                               {region.region_name}
                           </ToggleGroupItem>
                       ))}
@@ -623,7 +627,7 @@ export default function CreateListingPage() {
               )}
             </div>
             <div className="space-y-2">
-              <Label>州/地區 (State)</Label>
+              <Label>州/地區 (State) <span className="text-red-500">*</span></Label>
               <input type="hidden" name="stateId" value={stateId} />
               <Popover open={isStateComboboxOpen} onOpenChange={setIsStateComboboxOpen}>
                 <PopoverTrigger asChild>
@@ -723,7 +727,7 @@ export default function CreateListingPage() {
             <h3 className="text-lg font-medium border-t pt-4">聯絡方式 (Contact Information)</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="phone">電話 (Phone)</Label>
+                <Label htmlFor="phone">電話 (Phone) {isProservice && <span className="text-red-500">*</span>}</Label>
                 <Input
                   id="phone"
                   name="phone"
@@ -734,7 +738,7 @@ export default function CreateListingPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">電子郵件 (Email)</Label>
+                <Label htmlFor="email">電子郵件 (Email) {isProservice && <span className="text-red-500">*</span>}</Label>
                 <Input
                   id="email"
                   name="email"
@@ -792,6 +796,17 @@ export default function CreateListingPage() {
                 />
               </div>
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="xiaohongshu">小红书 (Xiaohongshu)</Label>
+              <Input
+                id="xiaohongshu"
+                name="xiaohongshu"
+                type="url"
+                placeholder="输入小红书主页链接 (Enter Xiaohongshu profile link)"
+                value={xiaohongshu}
+                onChange={(e) => setXiaohongshu(e.target.value)}
+              />
+            </div>
             <h3 className="text-lg font-medium border-t pt-4">其他信息 (Other Information)</h3>
             
             <div className="space-y-3">
@@ -823,7 +838,7 @@ export default function CreateListingPage() {
                             aria-label={`${day} closed`}
                          />
                          <Label htmlFor={`closed-${day}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                             休息 (Closed)
+                             休息 (Closed) / 不定時 (Depends)
                          </Label>
                     </div>
                 </div>
@@ -834,7 +849,7 @@ export default function CreateListingPage() {
             {/* Services Section */}
             <h3 className="text-lg font-medium border-t pt-4">提供服務 (Services Offered)</h3>
             <div className="space-y-2">
-                <Label>添加服務 (Add Service)</Label>
+                <Label>添加服務 (Add Service) {isProservice && <span className="text-red-500">*</span>}</Label>
                 <div className="flex items-center gap-2">
                     {/* Service Selection Combobox */}
                     <Popover open={isServiceComboboxOpen} onOpenChange={setIsServiceComboboxOpen}>

@@ -105,7 +105,7 @@ const OperatingHoursTable: React.FC<{ hours: OperatingHours[] }> = ({ hours }) =
                 "text-[14px]",
                 hour.is_closed ? "text-destructive" : ""
               )}>
-                {hour.is_closed ? "Closed" : `${hour.open_time} - ${hour.close_time}`}
+                {hour.is_closed ? "休息Closed/不定時Depends - 請先查詢Please contact to check before visiting." : `${hour.open_time} - ${hour.close_time}`}
               </TableCell>
             </TableRow>
           ))}

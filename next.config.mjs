@@ -5,6 +5,16 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@supabase/supabase-js'],
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'ufmgmpqrmqvlwjgciqdb.supabase.co', 
+        port: '', // Keep empty for default ports
+        pathname: '/storage/v1/object/public/**', // Allow any path within public storage
+      },
+    ],
+  },
   async headers() {
     return [
       {

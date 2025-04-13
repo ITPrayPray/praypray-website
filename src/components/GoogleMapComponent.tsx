@@ -68,10 +68,14 @@ function GoogleMapComponent({
   const mapRef = useRef<google.maps.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
+  // Log the API key being used
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  console.log("GoogleMapComponent API Key:", apiKey);
+
   // Use the hook to load the Google Maps script
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
-    id: 'google-map-script', // Use a consistent ID
+    googleMapsApiKey: apiKey, // Use the variable
+    id: 'google-map-script',
   });
 
   const onLoad = useCallback(function callback(map: google.maps.Map) {
@@ -100,16 +104,13 @@ function GoogleMapComponent({
     arrows: false,
   };
 
-  // Simplified navigation handler - rely on component unmount for cleanup
+  // Simplified navigation handler
   const handleViewDetails = (listingId: string) => {
     console.log('Navigating to details for:', listingId);
     // Close marker before navigation
     setSelectedMarker(null);
-    // Navigate using router.push without aggressive cleanup
-    // A minimal delay might still help ensure state updates before navigation starts
-    setTimeout(() => {
-      router.push(`/detail/${encodeURIComponent(String(listingId))}`);
-    }, 50); 
+    // Navigate immediately without setTimeout
+    router.push(`/detail/${encodeURIComponent(String(listingId))}`);
   };
 
   // Simplified useEffect for cleanup - primarily for debugging

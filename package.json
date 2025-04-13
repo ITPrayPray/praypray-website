@@ -29,6 +29,7 @@
     "@react-google-maps/api": "^2.20.3",
     "@revenuecat/purchases-js": "^1.1.0",
     "@shadcn/ui": "^0.0.4",
+    "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-table": "^8.21.2",
     "axios": "^1.7.7",

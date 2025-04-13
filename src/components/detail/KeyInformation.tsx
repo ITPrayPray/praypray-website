@@ -22,6 +22,7 @@ interface KeyInformationProps {
   facebook?: string;
   instagram?: string;
   whatsapp?: string;
+  xiaohongshu?: string | null;
   icon?: string;
   tag?: { tag_name: string; id: number };
 }
@@ -45,6 +46,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
   facebook,
   instagram,
   whatsapp,
+  xiaohongshu,
   icon,
   tag,
 }) => {
@@ -77,6 +79,10 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
         return "secondary";
     }
   };
+
+  const displayGods = gods?.map(g => g.god?.god_name).filter(Boolean).join(', ') || '-';
+  const displayReligions = religions?.map(r => r.religion?.religion_name).filter(Boolean).join(', ') || '-';
+  const displayAddress = [address, state].filter(Boolean).join(', ');
 
   return (
     <div className="rounded-xl">
@@ -132,11 +138,11 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
                 {type.toLowerCase()}
               </Badge>
             )}
-            {religions?.map((r, i) => (
-              <Badge key={i} variant="outline" className="text-[14px] border-border">
-                {r.religion.religion_name}
+            {displayReligions !== '-' && (
+              <Badge variant="outline" className="text-[14px] border-border">
+                {displayReligions}
               </Badge>
-            ))}
+            )}
           </div>
 
           {/* Listing Name */}
@@ -149,7 +155,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
             <div className="flex flex-wrap items-start gap-2">
               <Star className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
               <span className="text-[14px]">
-                神祇: {gods.map(g => g.god.god_name).join(', ')}
+                神祇: {displayGods}
               </span>
             </div>
           )}
@@ -159,7 +165,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
             <div className="flex items-start gap-2">
               <MapPin className="h-4 w-4 mt-0.5 text-primary flex-shrink-0" />
               <span className="text-[14px]">
-                {[address, state].filter(Boolean).join(', ')}
+                {displayAddress}
               </span>
             </div>
           )}
@@ -251,6 +257,31 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
               <Instagram className="h-4 w-4" />
             )}
           </Button>
+
+          {/* Xiaohongshu Button */}
+          {xiaohongshu && (
+            <Button
+              variant="outline"
+              size="icon"
+              className={cn(
+                "h-8 w-8 flex-shrink-0 rounded-full",
+                !xiaohongshu && "opacity-50 cursor-not-allowed"
+              )}
+              asChild={!!xiaohongshu}
+              disabled={!xiaohongshu}
+            >
+              <a 
+                href={xiaohongshu} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                aria-label="Xiaohongshu" 
+                className="text-gray-500 hover:text-red-600 font-semibold flex items-center justify-center h-5 w-5"
+                title="小红书 (Xiaohongshu)"
+              >
+                <span className="text-sm leading-none">紅</span>
+              </a>
+            </Button>
+          )}
 
           {/* WhatsApp Button */}
           <Button

@@ -1,84 +1,107 @@
 // src/components/UserMenu.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabaseClient";
-import { Session } from "@supabase/supabase-js";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import AuthDialog from "@/components/AuthDialog";
+import React, { useState, useEffect } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import AuthDialog from './AuthDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useRouter } from "next/navigation";
+} from '@/components/ui/dropdown-menu';
+import { useRouter } from 'next/navigation';
+import type { User } from '@supabase/supabase-js';
 
 export default function UserMenu() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const router = useRouter();
+  const supabase = createClient();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false);
 
   useEffect(() => {
-    // 获取当前会话
-    const getCurrentSession = async () => {
-      const { data: { session: currentSession }, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error fetching session:', error.message);
-      } else {
-        setSession(currentSession);
-      }
+    setLoading(true);
+    const getUser = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser ?? null);
+      setLoading(false);
     };
+    getUser();
 
-    getCurrentSession();
-
-    // 监听身份验证状态变化
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, authSession) => {
-      setSession(authSession);
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      if (event === 'SIGNED_IN') {
+        setIsAuthDialogOpen(false);
+        router.refresh();
+      }
+      if (event === 'SIGNED_OUT') {
+        router.push('/');
+        router.refresh();
+      }
     });
 
     return () => {
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase, router]);
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error("Error signing out:", error.message);
-    } else {
-      router.refresh(); // 刷新页面以更新用户状态
+      console.error('Error signing out:', error);
     }
   };
 
-  if (session && session.user) {
-    // 已登录
-    const email = session.user.email || "";
-    const initials = email.slice(0, 2).toUpperCase();
-
-    return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Avatar className="cursor-pointer">
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => alert("账户设置")}>账户设置</DropdownMenuItem>
-          <DropdownMenuItem onClick={handleSignOut}>登出</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    );
-  } else {
-    // 未登录
-    return (
-      <>
-        <Button onClick={() => setShowAuthDialog(true)}>登录</Button>
-        <AuthDialog isOpen={showAuthDialog} onClose={() => setShowAuthDialog(false)} />
-      </>
-    );
+  if (loading) {
+    return <div className="h-10 w-10 rounded-full bg-gray-200 animate-pulse"></div>;
   }
+
+  return (
+    <div>
+      {user ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={user.user_metadata?.avatar_url || ''} alt={user.email} />
+                <AvatarFallback>{user.email?.[0]?.toUpperCase() ?? 'U'}</AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">已登入 (Logged in)</p>
+                <p className="text-xs leading-none text-muted-foreground truncate">
+                  {user.email}
+                </p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => router.push('/analytics')}>
+              我的列表 (My Listings)
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={handleSignOut}>
+              登出 (Log out)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <Button onClick={() => setIsAuthDialogOpen(true)}>登入 (Login)</Button>
+      )}
+
+      <AuthDialog
+        isOpen={isAuthDialogOpen}
+        onClose={() => setIsAuthDialogOpen(false)}
+      />
+    </div>
+  );
 }

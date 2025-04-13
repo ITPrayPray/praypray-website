@@ -19,11 +19,14 @@ function LocationMap({ lat, lng, google_map_link }: LocationMapProps) {
 
   const hasValidCoords = lat != null && lng != null && typeof lat === 'number' && typeof lng === 'number';
 
+  // Log the API key being used
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  console.log("LocationMap API Key:", apiKey);
+
   // --- Call Hooks Unconditionally --- 
   const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '',
-    id: 'google-map-script-detail', 
-    // Load the script regardless, but we only render the map if hasValidCoords is true
+    googleMapsApiKey: apiKey, // Use the variable
+    id: 'google-map-script', 
   });
 
   const onLoad = useCallback((map: google.maps.Map) => { mapRef.current = map; }, []);

@@ -55,6 +55,7 @@ export interface DetailData {
   }>;
   facebook?: string;
   instagram?: string;
+  xiaohongshu?: string | null;
 }
 
 // 定義我們需要在前端顯示的營業時間結構
@@ -191,6 +192,7 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error, operati
               facebook={data.facebook}
               instagram={data.instagram}
               whatsapp={data.whatsapp}
+              xiaohongshu={data.xiaohongshu}
               icon={data.icon}
               tag={data.tag}
             />

@@ -1,14 +1,16 @@
 'use server';
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient as createServerSupabaseClient } from '@/lib/supabase/server'; // <-- Alias user-context client
+import { createServerClient as createAdminSupabaseClient } from '@supabase/ssr'; // <-- Import base client for admin
+import { cookies } from 'next/headers'; // <-- Need cookies for admin client too
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
 // IMPORTANT: Use Service Role Key only on the server!
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // Make sure SUPABASE_SERVICE_ROLE_KEY is set in your environment variables
 // DO NOT expose this key to the client-side
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 interface CreateListingResult {
   success: boolean;
@@ -28,13 +30,36 @@ export async function createListingAction(
   prevState: CreateListingResult | undefined, // For useFormState
   formData: FormData
 ): Promise<CreateListingResult> {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error("Server Action Error: Supabase URL or Service Key is missing.");
-    return { success: false, message: "伺服器配置錯誤。(Server configuration error.)" };
-  }
+  // Create user-context client
+  const supabase = createServerSupabaseClient(); 
 
-  // Initialize Supabase client with Service Role Key
-  const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+  // Get user session (needed for owner_id)
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    console.error("User not authenticated for create action:", userError);
+    return { success: false, message: "需要登入才能創建列表。(Authentication required.)" };
+  }
+  const ownerId = user.id;
+
+  // Create separate Admin client with Service Role Key
+  const cookieStore = cookies(); // Need cookie store for admin client structure
+  const supabaseAdmin = createAdminSupabaseClient(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        cookies: { // Provide dummy cookie handlers for service role client
+          get(name: string) { return cookieStore.get(name)?.value; }, // Still useful to read potentially
+          set() {}, // Service role doesn't typically set user cookies
+          remove() {}, // Service role doesn't typically remove user cookies
+        },
+        auth: {
+            // Prevent admin client from persisting session cookies accidentally
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+        }
+      }
+  );
 
   // --- 1. Extract Data from FormData --- 
   const name = formData.get('name') as string;
@@ -48,6 +73,7 @@ export async function createListingAction(
   const facebook = formData.get('facebook') as string | null;
   const instagram = formData.get('instagram') as string | null;
   const whatsapp = formData.get('whatsapp') as string | null;
+  const xiaohongshu = formData.get('xiaohongshu') as string | null;
   const googleMapLink = formData.get('googleMapLink') as string | null;
   const stateId = formData.get('stateId') as string | null; // This should be the selected state_id
   const tagIdString = formData.get('tagId') as string | null;
@@ -67,7 +93,7 @@ export async function createListingAction(
 
   let iconUrl: string | null = null;
 
-  // --- 2. Upload Icon File (if provided) --- 
+  // --- 2. Upload Icon File (using Admin client if necessary) --- 
   if (iconFile && iconFile.size > 0) {
     const fileExt = iconFile.name.split('.').pop();
     const fileName = `${Math.random()}.${fileExt}`;
@@ -129,23 +155,24 @@ export async function createListingAction(
     facebook: facebook,
     instagram: instagram,
     whatsapp: whatsapp,
+    xiaohongshu: xiaohongshu,
     google_map_link: googleMapLink,
     state_id: stateId,
     tag_id: tagIdString ? parseInt(tagIdString, 10) : null,
     icon: iconUrl,
     opening_hours: parsedOpeningHours,
-    // TODO: Get actual owner_id from user session (e.g., using cookies or Supabase auth helper)
-    // owner_id: 'YOUR_LOGGED_IN_USER_ID'
+    owner_id: ownerId, // <-- Set owner_id from authenticated user
   };
 
-  // --- 4. Insert into Listings Table --- 
+  // --- 4. Insert into Listings Table (using user-context client) --- 
   let newListingId: string | null = null;
   try {
-    const { data: newListings, error: insertError } = await supabaseAdmin
+    // Use the standard client to respect RLS on insert if needed
+    const { data: newListings, error: insertError } = await supabase
       .from('listings')
       .insert(listingData)
-      .select('listing_id') // Select the ID of the new row
-      .single(); // Expect only one row back
+      .select('listing_id')
+      .single();
 
     if (insertError) {
       console.error('Listing Insert Error:', insertError);
@@ -203,6 +230,7 @@ export async function createListingAction(
           custom_description: service.custom_description || null // Ensure null if empty
         }));
 
+        // Use admin client if RLS might block user from inserting into linking table
         const { error: serviceInsertError } = await supabaseAdmin
           .from('listing_services')
           .insert(serviceDataToInsert);
