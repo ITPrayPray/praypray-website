@@ -216,20 +216,17 @@ const DetailPage: React.FC<DetailPageProps> = ({ data, isLoading, error, operati
               />
             </section>
 
-            {/* Map Section */}
-            {(data.lat && data.lng) && (
-              <section id={sectionIds.location} className="mb-10 md:mb-0" aria-label="Location">
-                {/* Map Container - No fixed height on outer container */}
+            {/* Map Section - Keep conditional rendering simple, LocationMap handles logic */}
+            {/* We pass lat/lng if they exist, LocationMap decides what to show */}
+            <section id={sectionIds.location} className="mb-10 md:mb-0" aria-label="Location">
                 <div className="flex flex-col space-y-4">
-                  {/* Map Container - Fixed height only on map container */}
                   <LocationMap 
-                    lat={data.lat!} 
-                    lng={data.lng!}
+                    lat={data.lat}
+                    lng={data.lng}
                     google_map_link={data.google_map_link}
                   />
                 </div>
-              </section>
-            )}
+            </section>
           </div>
 
           <Separator className="my-10" />

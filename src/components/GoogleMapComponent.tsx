@@ -12,8 +12,8 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 interface MarkerData {
-  lat: number;
-  lng: number;
+  lat?: number | null;
+  lng?: number | null;
   listing_name: string;
   location: string;
   listing_id: string;
@@ -120,6 +120,20 @@ function GoogleMapComponent({
     };
   }, []);
 
+  // Filter markers to only include those with valid lat/lng
+  const validMarkers = markers.filter(
+    (marker) => 
+      marker.lat != null && 
+      marker.lng != null &&
+      typeof marker.lat === 'number' && 
+      typeof marker.lng === 'number'
+  );
+
+  // Determine center based on valid markers or default
+  const mapCenter = validMarkers.length > 0 
+    ? { lat: validMarkers[0].lat!, lng: validMarkers[0].lng! } 
+    : defaultCenter;
+
   // Handle loading error state
   if (loadError) {
     console.error("Failed to load Google Maps script:", loadError);
@@ -148,22 +162,21 @@ function GoogleMapComponent({
     <div ref={mapContainerRef} style={containerStyle}>
       <GoogleMap
         mapContainerStyle={{ width: '100%', height: '100%' }}
-        center={markers.length > 0 ? { lat: markers[0].lat, lng: markers[0].lng } : defaultCenter}
-        zoom={12}
+        center={mapCenter}
+        zoom={validMarkers.length > 0 ? 12 : 10}
         onLoad={onLoad}
         onUnmount={onUnmount}
         onClick={onMapClick}
-        // Add options to potentially improve performance/stability
         options={{
           gestureHandling: 'cooperative', 
           disableDefaultUI: false,
         }}
       >
-        {/* Render markers only when map is loaded (isLoaded is true) */}
-        {markers.map((marker) => (
+        {/* Render markers using the filtered list */}
+        {validMarkers.map((marker) => (
           <Marker
             key={marker.listing_id}
-            position={{ lat: marker.lat, lng: marker.lng }}
+            position={{ lat: marker.lat!, lng: marker.lng! }}
             label={{
               text: marker.listing_name,
               className: "hidden",
@@ -174,17 +187,21 @@ function GoogleMapComponent({
                   ? "#FFD700"
                   : "#000000"
               ),
-              // Ensure google object is available before accessing Size
               scaledSize: typeof google !== 'undefined' ? new google.maps.Size(24, 24) : undefined,
             }}
             onClick={() => {
-              setSelectedMarker(marker);
+              // Find the original marker data to set as selected
+              // This ensures selectedMarker has all original fields even if lat/lng were initially null
+              const originalMarker = markers.find(m => m.listing_id === marker.listing_id);
+              if (originalMarker) {
+                  setSelectedMarker(originalMarker); 
+              }
             }}
           />
         ))}
         
         {/* Render OverlayView only when map is loaded and marker selected */}
-        {selectedMarker && (
+        {selectedMarker && selectedMarker.lat != null && selectedMarker.lng != null && (
           <OverlayView
             position={{ lat: selectedMarker.lat, lng: selectedMarker.lng }}
             mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}

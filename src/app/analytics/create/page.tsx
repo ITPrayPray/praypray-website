@@ -24,7 +24,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { UploadCloud, Check, ChevronsUpDown, Loader2, X } from 'lucide-react';
+import { UploadCloud, Check, ChevronsUpDown, Loader2, X, Trash2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { cn } from "@/lib/utils";
 import {
@@ -71,6 +71,16 @@ interface DayHours {
   isClosed: boolean;
 }
 
+interface Service {
+  service_id: string;
+  service_name: string;
+}
+
+interface SelectedService extends Service {
+  price: string; // Keep as string for input control
+  custom_description: string;
+}
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -112,7 +122,6 @@ export default function CreateListingPage() {
   const [googleMapLink, setGoogleMapLink] = useState('');
   const [stateId, setStateId] = useState('');
   const [tagId, setTagId] = useState('');
-  const [servicesInput, setServicesInput] = useState('');
 
   const [regionsList, setRegionsList] = useState<Region[]>([]);
   const [selectedRegionId, setSelectedRegionId] = useState<string | null>(null);
@@ -129,6 +138,12 @@ export default function CreateListingPage() {
   const [selectedGodIds, setSelectedGodIds] = useState<string[]>([]);
   const [isGodComboboxOpen, setIsGodComboboxOpen] = useState(false);
   const [isLoadingGods, setIsLoadingGods] = useState(true);
+
+  const [allServices, setAllServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]); // Array of selected services with details
+  const [isLoadingServices, setIsLoadingServices] = useState(true);
+  const [currentServiceSelection, setCurrentServiceSelection] = useState<string>(""); // Holds service_id from combobox
+  const [isServiceComboboxOpen, setIsServiceComboboxOpen] = useState(false);
 
   const [formState, formAction] = useFormState(createListingAction, initialState);
 
@@ -244,6 +259,30 @@ export default function CreateListingPage() {
     fetchGods();
   }, []);
 
+  useEffect(() => {
+    const fetchServices = async () => {
+      if (!supabase) return;
+      setIsLoadingServices(true);
+      try {
+        // Fetch only id and name initially
+        const { data, error } = await supabase
+          .from('services')
+          .select('service_id, service_name') 
+          .order('service_name', { ascending: true });
+        if (error) {
+          console.error('Error fetching services:', error);
+        } else {
+          setAllServices(data || []);
+        }
+      } catch (err) {
+        console.error('Unexpected error fetching services:', err);
+      } finally {
+        setIsLoadingServices(false);
+      }
+    };
+    fetchServices();
+  }, []);
+
   const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -274,6 +313,44 @@ export default function CreateListingPage() {
     }));
   };
 
+  const handleAddService = () => {
+    if (!currentServiceSelection) return; // No service selected in combobox
+    const serviceToAdd = allServices.find(s => s.service_id === currentServiceSelection);
+    // Check if already added
+    const isAlreadyAdded = selectedServices.some(s => s.service_id === currentServiceSelection);
+
+    if (serviceToAdd && !isAlreadyAdded) {
+      setSelectedServices(prev => [
+        ...prev,
+        { 
+          ...serviceToAdd, // service_id, service_name
+          price: '', // Default empty price
+          custom_description: '' // Default empty description
+        }
+      ]);
+      setCurrentServiceSelection(""); // Reset combobox selection state
+      // We might need to manually clear the Combobox input display value if it uses a separate state
+    }
+  };
+
+  const handleRemoveService = (serviceIdToRemove: string) => {
+    setSelectedServices(prev => prev.filter(s => s.service_id !== serviceIdToRemove));
+  };
+
+  const handleSelectedServiceChange = (
+      serviceId: string, 
+      field: 'price' | 'custom_description', 
+      value: string
+  ) => {
+    setSelectedServices(prev => 
+      prev.map(service => 
+        service.service_id === serviceId 
+          ? { ...service, [field]: value } 
+          : service
+      )
+    );
+  };
+
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -290,6 +367,12 @@ export default function CreateListingPage() {
       }
     });
     formData.set('openingHours', JSON.stringify(openingHoursJson));
+
+    // Append selected services data as JSON string
+    formData.set('listingServicesData', JSON.stringify(selectedServices));
+
+    // Ensure tagId hidden input value is set correctly by the ToggleGroup binding
+    formData.set('tagId', tagId);
 
     formAction(formData);
   };
@@ -363,6 +446,33 @@ export default function CreateListingPage() {
                  )}
               </div>
               <p className="text-sm text-muted-foreground">上傳一個方形圖標。(Upload a square icon.)</p>
+            </div>
+            <div className="space-y-2">
+              <Label>列表類型 (Listing Type) <span className="text-red-500">*</span></Label>
+              <ToggleGroup
+                  type="single"
+                  value={tagId}
+                  onValueChange={(value) => {
+                      if (value) {
+                          setTagId(value);
+                      } else {
+                          // Optionally handle deselection, e.g., clear or keep previous
+                          // For a required field, maybe don't allow deselection?
+                          // setTagId(''); // Or keep the value if deselection isn't intended
+                      }
+                  }}
+                  className="flex flex-wrap gap-2 justify-start"
+                  aria-required="true"
+              >
+                  <ToggleGroupItem key="1" value="1" aria-label="Select TEMPLE">
+                      TEMPLE
+                  </ToggleGroupItem>
+                  <ToggleGroupItem key="2" value="2" aria-label="Select PROSERVICE">
+                      PROSERVICE
+                  </ToggleGroupItem>
+              </ToggleGroup>
+              <input type="hidden" name="tagId" value={tagId} />
+              <p className="text-sm text-muted-foreground">請選擇列表類型。(Please select a listing type.)</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="name">名稱 (Name)</Label>
@@ -721,32 +831,123 @@ export default function CreateListingPage() {
                <input type="hidden" name="openingHours" /> 
             </div>
 
+            {/* Services Section */}
+            <h3 className="text-lg font-medium border-t pt-4">提供服務 (Services Offered)</h3>
             <div className="space-y-2">
-              <Label htmlFor="servicesInput">服務 (Services)</Label>
-              <Textarea
-                id="servicesInput"
-                name="servicesInput"
-                placeholder="輸入服務信息 (MVP 階段暫不處理)"
-                value={servicesInput}
-                onChange={(e) => setServicesInput(e.target.value)}
-                rows={4}
-                disabled
-              />
-              <p className="text-sm text-muted-foreground">MVP 階段暫不處理此欄位。</p>
+                <Label>添加服務 (Add Service)</Label>
+                <div className="flex items-center gap-2">
+                    {/* Service Selection Combobox */}
+                    <Popover open={isServiceComboboxOpen} onOpenChange={setIsServiceComboboxOpen}>
+                        <PopoverTrigger asChild>
+                            <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={isServiceComboboxOpen}
+                                className="w-[250px] justify-between font-normal" // Adjust width as needed
+                                disabled={isLoadingServices}
+                            >
+                                {currentServiceSelection
+                                    ? allServices.find((s) => s.service_id === currentServiceSelection)?.service_name
+                                    : "選擇服務... (Select service...)"}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[250px] p-0"> {/* Match trigger width */} 
+                            <Command filter={(value, search) => {
+                                const service = allServices.find(s => s.service_name.toLowerCase() === value.toLowerCase());
+                                if (service && service.service_name.toLowerCase().includes(search.toLowerCase())) return 1;
+                                return 0;
+                            }}>
+                                <CommandInput placeholder="搜索服務... (Search service...)" />
+                                <CommandList>
+                                <CommandEmpty>{isLoadingServices ? "載入中..." : "找不到服務."}</CommandEmpty>
+                                <CommandGroup>
+                                    {allServices.map((service) => (
+                                    <CommandItem
+                                        key={service.service_id}
+                                        value={service.service_name} // Use name for filtering
+                                        onSelect={(currentValue) => {
+                                            const selected = allServices.find(s => s.service_name.toLowerCase() === currentValue.toLowerCase());
+                                            if (selected) {
+                                                 // Update the temporary selection state
+                                                 setCurrentServiceSelection(selected.service_id === currentServiceSelection ? "" : selected.service_id);
+                                            }
+                                            setIsServiceComboboxOpen(false); // Close popover on select
+                                        }}
+                                    >
+                                        <Check
+                                            className={cn("mr-2 h-4 w-4",
+                                            currentServiceSelection === service.service_id ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
+                                        {service.service_name}
+                                    </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+
+                    {/* Add Service Button */}
+                    <Button 
+                        type="button" 
+                        onClick={handleAddService}
+                        disabled={!currentServiceSelection || selectedServices.some(s => s.service_id === currentServiceSelection)} // Disable if no selection or already added
+                    >
+                        添加 (Add)
+                    </Button>
+                </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tagId">標籤 ID (Tag ID) <span className="text-red-500">*</span></Label>
-              <Input
-                id="tagId"
-                name="tagId"
-                placeholder="輸入標籤 ID (未來使用下拉選單)"
-                value={tagId}
-                onChange={(e) => setTagId(e.target.value)}
-                required
-              />
-              <p className="text-sm text-muted-foreground">此為必填項。未來將改為下拉選單。</p>
-            </div>
+            {/* List of Selected Services */} 
+            {selectedServices.length > 0 && (
+                <div className="space-y-4 pt-4 border-t border-dashed">
+                    <Label>已選服務詳情 (Selected Service Details)</Label>
+                    {selectedServices.map((service, index) => (
+                        <div key={service.service_id} className="p-3 border rounded-md space-y-2 relative bg-muted/40">
+                            <Button 
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-1 right-1 h-6 w-6"
+                                onClick={() => handleRemoveService(service.service_id)}
+                                aria-label={`Remove ${service.service_name}`}
+                             >
+                                <Trash2 className="h-4 w-4 text-muted-foreground hover:text-destructive" />
+                            </Button>
+                            <p className="font-medium text-sm">{service.service_name}</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-[120px_1fr] gap-2">
+                                <div className="space-y-1">
+                                    <Label htmlFor={`service-price-${index}`} className="text-xs">價格 (Price)</Label>
+                                    <Input 
+                                        id={`service-price-${index}`}
+                                        name={`service_${service.service_id}_price`} // Unique name might be helpful, but we use state
+                                        type="number"
+                                        placeholder="例如 180" 
+                                        value={service.price}
+                                        onChange={(e) => handleSelectedServiceChange(service.service_id, 'price', e.target.value)}
+                                        className="h-8 text-sm"
+                                     />
+                                </div>
+                                <div className="space-y-1">
+                                     <Label htmlFor={`service-desc-${index}`} className="text-xs">自定義描述 (Custom Desc.)</Label>
+                                     <Textarea 
+                                        id={`service-desc-${index}`}
+                                        name={`service_${service.service_id}_desc`} 
+                                        placeholder="此列表的特別說明 (Notes specific to this listing)"
+                                        value={service.custom_description}
+                                        onChange={(e) => handleSelectedServiceChange(service.service_id, 'custom_description', e.target.value)}
+                                        rows={1}
+                                        className="text-sm resize-y min-h-[32px]"
+                                      />
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+            {/* Hidden input to pass data */}
+            <input type="hidden" name="listingServicesData" />
           </CardContent>
           <CardFooter>
             <SubmitButton />

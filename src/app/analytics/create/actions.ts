@@ -16,6 +16,14 @@ interface CreateListingResult {
   listingId?: string;
 }
 
+// Define the type for the data coming from the form
+interface SelectedServiceData {
+  service_id: string;
+  service_name: string; // Included for context, but not inserted into listing_services
+  price: string;
+  custom_description: string;
+}
+
 export async function createListingAction(
   prevState: CreateListingResult | undefined, // For useFormState
   formData: FormData
@@ -47,12 +55,13 @@ export async function createListingAction(
   const religionIdsString = formData.get('religionIds') as string | null;
   const godIdsString = formData.get('godIds') as string | null;
   const iconFile = formData.get('iconFile') as File | null;
+  const listingServicesJson = formData.get('listingServicesData') as string | null; // <-- Extract service data
 
   // Basic validation (more robust validation needed in production)
   if (!name || !description || !stateId || !tagIdString) {
     return { 
         success: false, 
-        message: "名稱、描述、州/地區和標籤 ID 為必填項。(Name, description, state, and Tag ID are required.)" 
+        message: "名稱、描述、州/地區和列表類型為必填項。(Name, description, state, and Listing Type are required.)"
     };
   }
 
@@ -156,7 +165,7 @@ export async function createListingAction(
     return { success: false, message: "創建列表期間發生意外錯誤。(Unexpected error during listing creation.)" };
   }
 
-  // --- 5. Insert into Linking Tables (Religions, Gods) --- 
+  // --- 5. Insert into Linking Tables (Religions, Gods, SERVICES) --- 
   // We need the newListingId from step 4
 
   const religionIds = religionIdsString ? religionIdsString.split(',').map(id => id.trim()).filter(id => id) : [];
@@ -177,6 +186,36 @@ export async function createListingAction(
     if (godError) {
       console.error('Error inserting into listing_gods:', godError);
       // NOTE: Listing is created, but relations failed. Handle cleanup or log warning.
+    }
+  }
+
+  // Parse and insert selected services
+  if (listingServicesJson && newListingId) {
+    try {
+      const selectedServices: SelectedServiceData[] = JSON.parse(listingServicesJson);
+
+      if (Array.isArray(selectedServices) && selectedServices.length > 0) {
+        const serviceDataToInsert = selectedServices.map(service => ({
+          listing_id: newListingId!,
+          service_id: service.service_id,
+          // Convert price string to number, handle potential errors/empty strings
+          price: service.price ? parseFloat(service.price) : null, 
+          custom_description: service.custom_description || null // Ensure null if empty
+        }));
+
+        const { error: serviceInsertError } = await supabaseAdmin
+          .from('listing_services')
+          .insert(serviceDataToInsert);
+
+        if (serviceInsertError) {
+          console.error('Error inserting into listing_services:', serviceInsertError);
+          // Decide how critical this is. Maybe return a partial success message?
+          // For now, log warning and continue to redirect.
+        }
+      }
+    } catch (e) {
+      console.error("Error parsing or inserting listing services data:", e);
+      // Log error but proceed for now
     }
   }
 

@@ -144,11 +144,9 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
       lat: listingData.lat,
       lng: listingData.lng,
       google_map_link: listingData.google_map_link,
-      // Correctly map state: check if state exists and is an object
       state: listingData.state && typeof listingData.state === 'object' && !Array.isArray(listingData.state) 
              ? listingData.state 
              : undefined,
-      // Correctly map services based on the corrected query structure
       services: servicesData
         ?.filter(s => s && typeof s === 'object' && 'id' in s) // Filter out potential errors/nulls
         .map((s, index) => {
@@ -182,21 +180,18 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
                      : { service_name: '未知服務', service_description: undefined } 
           };
         }) || [],
-      // Correctly map religions: access nested object directly
       religions: listingData.religions?.map(r => ({
         // Check if r.religion exists and is an object
         religion: r.religion && typeof r.religion === 'object' && !Array.isArray(r.religion) 
                   ? r.religion 
                   : { religion_name: '未知宗教' }
       })) || [],
-      // Correctly map gods: access nested object directly
       gods: listingData.gods?.map(g => ({
         // Check if g.god exists and is an object
         god: g.god && typeof g.god === 'object' && !Array.isArray(g.god) 
              ? g.god 
              : { god_name: '未知神祇' } // god_description is already optional in DetailData
       })) || [],
-      // Correctly map tag: check if tag exists and is an object
       tag: listingData.tag && typeof listingData.tag === 'object' && !Array.isArray(listingData.tag) 
            ? listingData.tag 
            : undefined,
@@ -208,8 +203,8 @@ async function fetchDetailDirectly(id: string): Promise<DetailData> {
       instagram: listingData.instagram,
     };
 
-    console.log("Received data directly:", combinedData);
-    return combinedData;
+    console.log("Received data directly (WITH lat/lng):", combinedData);
+    return combinedData; // No cast needed if type matches
 
   } catch (error) {
     console.error("Error in fetchDetailDirectly:", error);
