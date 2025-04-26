@@ -2,7 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function updateSession(request: NextRequest) {
-  console.log('[updateSession] Middleware helper invoked for:', request.nextUrl.pathname);
+  console.log(`[MW] Invoked for: ${request.nextUrl.pathname}`);
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -16,59 +16,49 @@ export async function updateSession(request: NextRequest) {
       cookies: {
         get(name: string) {
           const value = request.cookies.get(name)?.value;
-          // console.log(`[updateSession] Cookie GET: ${name}`, value ? 'Found' : 'Not Found');
+          console.log(`[MW Cookie Get] ${name}: ${value ? '******' : 'Not Found'}`); // Log found status
           return value;
         },
         set(name: string, value: string, options: CookieOptions) {
-          // console.log(`[updateSession] Cookie SET: ${name}`);
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          })
+          console.log(`[MW Cookie Set] Setting ${name}...`);
+          // Purposefully update request (SSR client reads this) AND response (browser needs this)
+           try {
+             request.cookies.set({ name, value, ...options }); // Update request copy for client init
+             response = NextResponse.next({ // Recreate response to reflect potential header changes? (Might not be needed)
+               request: { headers: request.headers },
+             });
+             response.cookies.set({ name, value, ...options }); // Set cookie on the response
+           } catch (error) {
+              console.error(`[MW Cookie Set] Error setting cookie ${name}:`, error);
+              // If set from server component, error is expected, ignore
+           }
         },
         remove(name: string, options: CookieOptions) {
-          // console.log(`[updateSession] Cookie REMOVE: ${name}`);
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          })
+          console.log(`[MW Cookie Remove] Removing ${name}...`);
+           try {
+               request.cookies.set({ name, value: '', ...options });
+               response = NextResponse.next({
+                 request: { headers: request.headers },
+               });
+               response.cookies.set({ name, value: '', ...options });
+           } catch(error) {
+               console.error(`[MW Cookie Remove] Error removing cookie ${name}:`, error);
+           }
         },
       },
     }
   )
 
   // Refresh session if expired - crucial!
-  console.log('[updateSession] Calling supabase.auth.getUser() to refresh session...');
+  console.log('[MW] Calling supabase.auth.getUser()...');
   const { data: { user }, error } = await supabase.auth.getUser();
 
   if (error) {
-      console.error('[updateSession] Error calling getUser:', error);
+      console.error('[MW] getUser Error:', error.name, error.message);
   } else {
-      console.log('[updateSession] getUser result:', user ? `User ID: ${user.id}` : 'No user session');
+      console.log('[MW] getUser Result:', user ? `User ID: ${user.id}` : 'No user session from middleware');
   }
 
-  console.log('[updateSession] Returning response.');
+  console.log('[MW] Returning response.');
   return response
 } 

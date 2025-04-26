@@ -11,8 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { supabase } from "@/utils/supabaseClient";
-import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AuthDialog({
   isOpen,
@@ -24,7 +23,7 @@ export default function AuthDialog({
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const router = useRouter();
+  const supabase = createClient();
 
   const handleAuth = async () => {
     if (isLogin) {
@@ -36,7 +35,6 @@ export default function AuthDialog({
         alert(error.message);
       } else {
         onClose();
-        router.refresh();
       }
     } else {
       const { error } = await supabase.auth.signUp({
