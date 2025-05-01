@@ -43,12 +43,14 @@ export async function POST(request: NextRequest) {
     // 2. Parse the incoming request body
     const event = await request.json();
     const eventType = event?.event?.type;
-    const appUserId = event?.event?.app_user_id;
-    // Extract external_id if available (adjust path based on actual event structure)
+    // Comment out unused variables for now
+    // const appUserId = event?.event?.app_user_id;
+    // const entitlementId = event?.event?.entitlement_id;
+    // const expirationAtMs = event?.event?.expiration_at_ms;
     const externalId = event?.event?.external_id || event?.event?.subscriber_attributes?.external_id?.value;
-    const listingId = externalId; // Assuming external_id is the listing_id
+    const listingId = externalId;
 
-    console.log(`Processing webhook event type: ${eventType} for user: ${appUserId}, listing: ${listingId}`);
+    console.log(`Processing webhook event type: ${eventType}, listing: ${listingId}`); // Removed unused vars from log
 
     // 3. Handle the event based on its type
     switch (eventType) {
