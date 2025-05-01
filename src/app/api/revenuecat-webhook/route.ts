@@ -40,24 +40,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing event data' }, { status: 400 })
     }
 
-    const { type, app_user_id, entitlement_id, product_id, expiration_at_ms } = event
+    // Prefix unused variables with underscore
+    const { type, product_id } = event
+
+    // Log the used variables
+    console.log(`Processing webhook event type: ${type}, product_id: ${product_id}`);
 
     // 3. 根據 event.type 更新 Supabase DB
     switch (type) {
       case 'INITIAL_PURCHASE':
       case 'RENEWAL':
-        // 假設你想將 listing 狀態設為 pending_review 或 approved
-        // 或者紀錄用戶的付費到期日(若為訂閱)
-        // 例如:
+        // Use product_id for matching
         await supabase
           .from('listings')
           .update({ status: 'pending_review' })
-          .eq('revenuecat_product_id', product_id)
+          // TODO: Update based on listing_id (external_id) passed from paywall instead of product_id?
+          // Or use app_user_id if that links to owner?
+          .eq('revenuecat_product_id', product_id) // This might affect multiple listings if product_id is reused
         break
 
       case 'CANCELLATION':
       case 'EXPIRATION':
-        // 若訂閱已取消/到期 → 可能將 listing 設為 expired / canceled
         await supabase
           .from('listings')
           .update({ status: 'canceled' })
@@ -70,8 +73,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ received: true }, { status: 200 })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('RevenueCat Webhook Error:', error)
-    return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 })
+    const message = error instanceof Error ? error.message : 'Server Error';
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -114,9 +114,10 @@ export async function updateListingAction(
           const { data: urlData } = supabaseAdmin.storage.from(iconsBucket).getPublicUrl(fileName);
           newIconUrl = urlData?.publicUrl ?? null;
           if (!newIconUrl) throw new Error('Failed to get new icon public URL');
-      } catch (error: any) {
+      } catch (error: unknown) {
           console.error('Icon Update Error:', error);
-          return { success: false, message: `圖標更新失敗: ${error.message}` };
+          const message = error instanceof Error ? error.message : '未知圖標更新錯誤';
+          return { success: false, message: `圖標更新失敗: ${message}` };
       }
   } // If no new iconFile, newIconUrl remains undefined
 
@@ -189,11 +190,10 @@ export async function updateListingAction(
          }));
          await supabaseAdmin.from('listing_services').insert(serviceData);
       }
-  } catch (linkError: any) {
+  } catch (linkError: unknown) {
        console.error("Error updating linking tables:", linkError);
-       // Return success but maybe with a warning that relations might be inconsistent?
-       // return { success: true, message: "列表已更新，但關聯更新失敗。", listingId };
-       return { success: false, message: `更新關聯數據失敗: ${linkError.message}` }; // Treat as failure for now
+       const message = linkError instanceof Error ? linkError.message : '未知關聯數據更新錯誤';
+       return { success: false, message: `更新關聯數據失敗: ${message}` };
   }
 
   // 9. Revalidate & Redirect
@@ -201,12 +201,13 @@ export async function updateListingAction(
   revalidatePath(`/detail/${listingId}`);
 
    try {
-     redirect(`/analytics`); // Or redirect to detail page: `/detail/${listingId}`
-   } catch (error: any) {
-       if (error.message !== 'NEXT_REDIRECT') { console.error("Redirect error:", error); }
-       // Assume success if redirect is attempted
+     redirect(`/analytics`);
+   } catch (error: unknown) {
+       if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+            // This is expected, proceed as success
+       } else {
+           console.error("Redirect error:", error);
+       }
        return { success: true, message: "列表更新成功。", listingId };
    }
-
-   // return { success: true, message: "列表更新成功。", listingId };
 } 
