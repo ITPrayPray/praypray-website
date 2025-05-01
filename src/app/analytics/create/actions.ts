@@ -12,37 +12,64 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 // DO NOT expose this key to the client-side
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Interface for the Server Action result
 interface CreateListingResult {
   success: boolean;
   message: string;
   listingId?: string;
+  shouldRedirect?: boolean; // Add flag for client-side redirect
+  redirectUrl?: string; // Add URL for client-side redirect
 }
 
-// Define the type for the data coming from the form
+// Interface for data to be inserted into listings table
+// (Define expected fields and types, including new ones)
+interface ListingInsertData {
+  listing_name: string;
+  description: string;
+  location?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  phone?: string | null;
+  email?: string | null;
+  website?: string | null;
+  facebook?: string | null;
+  instagram?: string | null;
+  whatsapp?: string | null;
+  xiaohongshu?: string | null;
+  google_map_link?: string | null;
+  state_id: string; // Assuming always required based on validation
+  tag_id: number; // Assuming always required based on validation
+  icon?: string | null;
+  opening_hours?: Record<string, string> | null;
+  owner_id: string;
+  classifier?: 'PROSERVICE' | null;
+  revenuecat_product_id?: string | null;
+  revenuecat_entitlement_id?: string | null;
+  subscription_start_date?: string | null; // ISO string or null
+  subscription_end_date?: string | null; // ISO string or null
+  status: 'PENDING' | 'LIVE';
+}
+
+// Define the type for the data coming from the form (for selected services)
 interface SelectedServiceData {
   service_id: string;
-  service_name: string; // Included for context, but not inserted into listing_services
+  service_name: string;
   price: string;
   custom_description: string;
 }
 
 export async function createListingAction(
-  prevState: CreateListingResult | undefined, // For useFormState
+  prevState: CreateListingResult | undefined,
   formData: FormData
 ): Promise<CreateListingResult> {
-  // Create user-context client
-  const supabase = createServerSupabaseClient(); 
-
-  // Get user session (needed for owner_id)
+  const supabase = createServerSupabaseClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     console.error("User not authenticated for create action:", userError);
     return { success: false, message: "需要登入才能創建列表。(Authentication required.)" };
   }
   const ownerId = user.id;
-
-  // Create separate Admin client with Service Role Key
-  const cookieStore = cookies(); // Need cookie store for admin client structure
+  const cookieStore = cookies();
   const supabaseAdmin = createAdminSupabaseClient(
       supabaseUrl,
       supabaseServiceKey,
@@ -83,8 +110,13 @@ export async function createListingAction(
   const iconFile = formData.get('iconFile') as File | null;
   const listingServicesJson = formData.get('listingServicesData') as string | null; // <-- Extract service data
 
+  // Determine the tag and type
+  const tagId = tagIdString ? parseInt(tagIdString, 10) : null;
+  const isProService = tagId === 2;
+  const finalStatus = isProService ? 'PENDING' : 'LIVE'; // PENDING for PROSERVICE, LIVE otherwise
+
   // Basic validation (more robust validation needed in production)
-  if (!name || !description || !stateId || !tagIdString) {
+  if (!name || !description || !stateId || !tagId) {
     return { 
         success: false, 
         message: "名稱、描述、州/地區和列表類型為必填項。(Name, description, state, and Listing Type are required.)"
@@ -92,13 +124,15 @@ export async function createListingAction(
   }
 
   let iconUrl: string | null = null;
+  let uploadedIconPath: string | null = null; // Store the path for potential deletion
+  const iconsBucket = 'listing-icons'; // Define bucket name here to be accessible in catch blocks
 
   // --- 2. Upload Icon File (using Admin client if necessary) --- 
   if (iconFile && iconFile.size > 0) {
     const fileExt = iconFile.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `public/${fileName}`; // Store in a 'public' folder within the bucket
-    const iconsBucket = 'listing-icons'; // Replace with your actual bucket name
+    const fileName = `${ownerId}/${Date.now()}.${fileExt}`; // More unique path
+    const filePath = `public/${fileName}`;
+    uploadedIconPath = filePath; // Store the path
 
     try {
       const { error: uploadError } = await supabaseAdmin.storage
@@ -117,13 +151,21 @@ export async function createListingAction(
       iconUrl = urlData?.publicUrl ?? null;
        if (!iconUrl) {
          console.error('Error getting public URL for icon');
-         // Decide if this is critical. Maybe proceed without icon?
-         // For now, let's treat it as an error. 
+         // Attempt to delete the uploaded file if URL retrieval fails
+         if (uploadedIconPath) {
+              console.log("Attempting to delete icon due to URL retrieval failure:", uploadedIconPath);
+              await supabaseAdmin.storage.from(iconsBucket).remove([uploadedIconPath]);
+         }
          return { success: false, message: "無法獲取圖標 URL。(Could not get icon URL.)" };
        }
 
     } catch (error) {
       console.error('Icon Upload Exception:', error);
+      // Attempt to delete icon on exception
+      if (uploadedIconPath) { // Use the stored path
+         console.log("Attempting to delete icon due to upload exception:", uploadedIconPath);
+         try { await supabaseAdmin.storage.from(iconsBucket).remove([uploadedIconPath]); } catch (delErr) { console.error("Failed to delete icon during cleanup:", delErr); }
+      }
       return { success: false, message: "圖標上傳期間發生意外錯誤。(Unexpected error during icon upload.)" };
     }
   } else {
@@ -143,7 +185,8 @@ export async function createListingAction(
     }
   }
 
-  const listingData = {
+  // Use the defined interface for listing data
+  const listingData: ListingInsertData = {
     listing_name: name,
     description: description,
     location: location,
@@ -158,30 +201,44 @@ export async function createListingAction(
     xiaohongshu: xiaohongshu,
     google_map_link: googleMapLink,
     state_id: stateId,
-    tag_id: tagIdString ? parseInt(tagIdString, 10) : null,
+    tag_id: tagId,
     icon: iconUrl,
     opening_hours: parsedOpeningHours,
     owner_id: ownerId, // <-- Set owner_id from authenticated user
+    classifier: isProService ? 'PROSERVICE' : null,
+    status: finalStatus // Set status based on type ('PENDING' or 'LIVE')
   };
 
   // --- 4. Insert into Listings Table (using user-context client) --- 
   let newListingId: string | null = null;
   try {
-    // Use the standard client to respect RLS on insert if needed
+    // Filter out null/undefined values before insert
+    const dataToInsert = Object.entries(listingData).reduce((acc, [key, value]) => {
+        if (value !== null && value !== undefined) {
+            acc[key as keyof ListingInsertData] = value;
+        }
+        return acc;
+    }, {} as Partial<ListingInsertData>);
+
     const { data: newListings, error: insertError } = await supabase
       .from('listings')
-      .insert(listingData)
+      .insert(dataToInsert) // Insert filtered data
       .select('listing_id')
       .single();
 
     if (insertError) {
       console.error('Listing Insert Error:', insertError);
-       // TODO: Consider deleting the uploaded icon if insert fails
+       // Attempt icon deletion
+       if (uploadedIconPath) { 
+           console.log("Attempting to delete icon due to listing insert failure:", uploadedIconPath);
+           await supabaseAdmin.storage.from(iconsBucket).remove([uploadedIconPath]);
+       }
       return { success: false, message: `創建列表失敗：${insertError.message}。(Failed to create listing)` };
     }
 
     if (!newListings?.listing_id) {
         console.error('Listing insert succeeded but no ID returned.');
+        if (uploadedIconPath) { /* Attempt deletion */ await supabaseAdmin.storage.from(iconsBucket).remove([uploadedIconPath]); }
         return { success: false, message: "創建列表成功，但無法獲取 ID。(Listing created, but failed to retrieve ID.)" };
     }
     newListingId = newListings.listing_id;
@@ -189,6 +246,11 @@ export async function createListingAction(
 
   } catch (error) {
     console.error('Listing Insert Exception:', error);
+    // Attempt icon deletion
+    if (uploadedIconPath) { 
+        console.log("Attempting to delete icon due to listing insert exception:", uploadedIconPath);
+        try { await supabaseAdmin.storage.from(iconsBucket).remove([uploadedIconPath]); } catch (delErr) { console.error("Failed to delete icon during cleanup:", delErr); }
+    }
     return { success: false, message: "創建列表期間發生意外錯誤。(Unexpected error during listing creation.)" };
   }
 
@@ -253,24 +315,57 @@ export async function createListingAction(
     revalidatePath(`/detail/${newListingId}`);
   }
 
-  try {
-    redirect(`/analytics`);
-  } catch (error: unknown) {
-    if (error instanceof Error && error.message !== 'NEXT_REDIRECT') {
-      console.error("Redirect error:", error);
-      return { success: false, message: `重定向失敗：${error.message}` };
+  if (isProService && newListingId) {
+    // Generate Paywall Link for PROSERVICE
+    const revenueCatPublicId = process.env.NEXT_PUBLIC_REVENUECAT_PUBLIC_API_KEY; // Use the same env var
+    const offeringId = 'PROSERVICE'; // Your offering identifier
+    const paywallBaseUrl = 'https://app.revenuecat.com/web-billing'; // Base URL for web billing
+
+    if (!revenueCatPublicId) {
+        console.error("RevenueCat Public API Key is not configured for Paywall Link generation.");
+        // Return error or handle fallback? For now, return error.
+        return { success: false, message: "無法生成付款連結：設定錯誤。", listingId: newListingId };
     }
-    return { 
-        success: true, 
-        message: "列表創建成功。(Listing created successfully.)", 
-        listingId: newListingId ?? undefined
+
+    const paywallParams = new URLSearchParams({
+        app_id: revenueCatPublicId,
+        offering_id: offeringId,
+        app_user_id: ownerId,
+        external_id: newListingId // Pass listing ID
+        // Add other parameters if needed (e.g., locale)
+    });
+
+    const paywallUrl = `${paywallBaseUrl}?${paywallParams.toString()}`;
+    console.log('Generated Paywall URL:', paywallUrl);
+
+    // Return success state with redirect URL for frontend
+    return {
+        success: true,
+        shouldRedirect: true,
+        redirectUrl: paywallUrl,
+        message: "列表已創建，正在重定向到付款頁面...",
+        listingId: newListingId
     };
+
+  } else {
+    // TEMPLE or non-PROSERVICE: Redirect directly using server-side redirect
+    const successMessage = "列表已成功創建。";
+    try {
+      redirect(`/analytics`); // This will throw NEXT_REDIRECT
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+        // This is expected for TEMPLE type redirects
+        return {
+          success: true,
+          shouldRedirect: false, // No client-side redirect needed
+          message: successMessage,
+          listingId: newListingId ?? undefined
+        };
+      }
+      console.error("Redirect error for non-pro listing:", error);
+      return { success: false, message: `重定向時發生錯誤: ${error instanceof Error ? error.message : '未知錯誤'}` };
+    }
   }
 
-  // Should technically not be reached due to redirect throwing
-  // return { 
-  //   success: true, 
-  //   message: "列表創建成功。(Listing created successfully.)", 
-  //   listingId: newListingId ?? undefined 
-  // };
+  // Should not be reached
 } 

@@ -7,14 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { UploadCloud, Check, ChevronsUpDown, X, Trash2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client'; 
+import { UploadCloud, Check, ChevronsUpDown, X, Trash2, Loader2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+// import { User } from '@supabase/supabase-js'; // No longer needed for RC init here
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+// --- Remove RevenueCat Imports --- 
+// import { Purchases, PurchasesError, CustomerInfo, LogLevel, PurchasesOffering as Offering, PurchasesPackage as Package, PurchasesStoreProduct as StoreProduct } from '@revenuecat/purchases-js';
+// import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"; // Keep Alert for form errors
 
 // --- Interfaces --- 
 interface State { state_id: string; state_name: string; }
@@ -52,21 +57,13 @@ export interface ListingFormData {
     selected_services_data?: SelectedService[]; // Full data needed for list
 }
 
-// Define the expected shape of the server action result
+// Define the expected shape of the server action result (Updated)
 interface FormActionResult {
   success: boolean;
   message: string;
   listingId?: string;
-}
-
-// --- Submit Button --- 
-function SubmitButton({ mode }: { mode: 'create' | 'edit' }) {
-  const pending = false;
-  return (
-    <Button type="submit" disabled={pending}>
-      {(mode === 'create' ? '提交創建' : '儲存更改')}
-    </Button>
-  );
+  shouldRedirect?: boolean; // Flag for client-side redirect
+  redirectUrl?: string;    // URL for client-side redirect
 }
 
 // --- Props for the Reusable Form --- 
@@ -81,12 +78,16 @@ interface ListingFormProps {
 const initialFormState: FormActionResult = {
   success: false,
   message: '',
+  shouldRedirect: false,
+  redirectUrl: undefined,
 };
 
 // --- Reusable Form Component --- 
 export function ListingForm({ initialData, mode, formActionFn }: ListingFormProps) {
   const supabase = createClient();
-  
+  // Remove RevenueCat instance state
+  // const [purchasesInstance, setPurchasesInstance] = useState<Purchases | null>(null);
+
   // --- Form State Initialization --- 
   // Initialize state from initialData if in edit mode, otherwise use defaults
   const [name, setName] = useState(initialData?.listing_name ?? '');
@@ -156,6 +157,13 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
   // --- useFormState --- 
   const [formState, formAction] = useFormState(formActionFn, initialFormState);
 
+  // Remove RevenueCat specific states
+  // const [selectedProductId, setSelectedProductId] = useState<string>(DEFAULT_PROSERVICE_PRODUCT_ID);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Use general submitting state
+  const [formError, setFormError] = useState<string | null>(null); // General form error state
+  // const [revenueCatInitialized, setRevenueCatInitialized] = useState<boolean>(false);
+  // const supabaseUser = useRef<User | null>(null); // No longer needed here
+
   // --- Data Fetching Effects --- 
   // Fetch Regions, Religions, Gods, Services (run once)
   useEffect(() => {
@@ -203,41 +211,58 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
   // Fetch States (depends on region)
   useEffect(() => {
       const fetchStatesForRegion = async () => {
-          if (!supabase || !selectedRegionId) {
-              setStates([]); 
-              setIsLoadingStates(true);
-              
-              // Simpler Reset Logic: Reset state if region changes, but not on initial load for edit
-              // This check might still be tricky if initial region loads after this effect runs once.
-              // A better approach might be to track if it's the initial fetch vs. user change.
-              // For now, let's reset IF stateId already has a value AND the region changed.
-              // This assumes stateId would only be set *after* initial data load in edit mode.
-              if (stateId && selectedRegionId !== /* Store initial regionId? */ null) { 
-                  // Let's simplify further: Only reset if NOT in edit mode or if region changes AFTER initial load
-                   // console.log("Region changed, resetting stateId");
-                   // setStateId(''); // Let's comment this auto-reset for now, might cause issues
+          // If NO region selected OR supabase not ready
+          if (!supabase || !selectedRegionId) { 
+              setStates([]); // Clear the states list
+              setIsLoadingStates(false); // Stop loading indicator
+
+              // If creating a new form OR region explicitly deselected, clear stateId
+              if (mode === 'create' || !selectedRegionId) { 
+                  setStateId(''); 
               }
+              return; // Don't proceed to fetch
+          }
+
+          // If region IS selected
+          setIsLoadingStates(true); // Start loading indicator
+          try {
+              // Fetch states matching the selected region
+              const { data, error } = await supabase
+                  .from('states')
+                  .select('state_id, state_name')
+                  .eq('region_id', selectedRegionId) 
+                  .order('state_name', { ascending: true });
               
-              try {
-                  const { data, error } = await supabase
-                      .from('states').select('state_id, state_name')
-                      .eq('region_id', selectedRegionId).order('state_name', { ascending: true });
-                  if (error) { console.error(`Error fetching states:`, error); setStates([]); }
-                  else { setStates(data || []); }
-              } catch (err) { console.error(`Unexpected error fetching states:`, err); setStates([]); }
-              finally { setIsLoadingStates(false); }
-          } else {
-              setStates([]); // Clear states if region becomes null
-              // Only clear stateId if NOT in edit mode or if user explicitly deselects region
-              if (mode === 'create' || !selectedRegionId) {
-                  setStateId('');
+              if (error) {
+                  console.error(`Error fetching states:`, error);
+                  setStates([]); // Clear states on error
+              } else {
+                  const fetchedStates = data || [];
+                  setStates(fetchedStates); // Update the states list
+
+                  // *** ADDED FIX ***
+                  // Check if the currently selected stateId exists in the new list
+                  // If not (e.g., region changed and old state is invalid), reset stateId
+                  const currentSelectedStateIsValid = fetchedStates.some(s => s.state_id === stateId);
+                  if (!currentSelectedStateIsValid && stateId) {
+                      console.log(`Region changed or initial load completed. Resetting invalid stateId: ${stateId}`);
+                      setStateId(''); // Reset the selected state
+                  }
               }
+          } catch (err) {
+              console.error(`Unexpected error fetching states:`, err);
+              setStates([]);
+          } finally {
+              setIsLoadingStates(false); // Stop loading indicator
           }
       };
-      if (selectedRegionId) {
-          fetchStatesForRegion();
-      }
-  }, [selectedRegionId, supabase, mode]); // Remove complex dependencies for now
+
+      fetchStatesForRegion(); // Execute the fetch function
+
+  }, [selectedRegionId, supabase, mode, stateId]); // Ensure stateId is in dependencies
+
+  // Remove RevenueCat Initialization useEffect
+  // useEffect(() => { /* ... RC init logic ... */ }, [supabase]);
 
   // --- Event Handlers (Filled In) --- 
    const handleIconChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -286,31 +311,57 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
           .filter((name): name is string => name !== undefined); // Use type guard
   }, [selectedGodIds, allGods]);
 
-  // --- Submit Handler --- 
+  // --- useFormState Hook ---
+  // const [formState, formAction] = useFormState(formActionFn, initialFormState);
+
+  // --- Effect to handle form submission result and redirect --- 
+  useEffect(() => {
+      if (formState?.success && formState.shouldRedirect && formState.redirectUrl) {
+          console.log("Redirecting to Paywall:", formState.redirectUrl);
+          setIsSubmitting(false); // Stop loading before redirect
+          window.location.href = formState.redirectUrl; // Perform client-side redirect
+      } else if (formState?.success && !formState.shouldRedirect) {
+          // Handle success for non-redirect cases (e.g., TEMPLE type)
+          // Server action already redirects, maybe show a success message briefly if needed?
+          console.log("Form submitted successfully (server redirect expected):", formState.message);
+          setIsSubmitting(false);
+          // Optional: Show toast or message here
+      } else if (formState && !formState.success && formState.message) {
+          // Handle failure
+          console.error("Form submission failed:", formState.message);
+          setFormError(formState.message); // Display error message
+          setIsSubmitting(false); // Stop loading
+      }
+  }, [formState]);
+
+  // --- Submit Handler (Simplified) --- 
   const handleFormSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFormError(null); // Clear previous errors
+    setIsSubmitting(true); // Start loading indicator
+
     const formData = new FormData(event.currentTarget);
-    // Append file IF a new file was selected
-    if (iconFile) {
-        formData.append('iconFile', iconFile);
-    }
-    // Append multi-select IDs
+
+    // Append necessary data not directly part of standard inputs
+    if (iconFile) formData.append('iconFile', iconFile);
+    else formData.delete('iconFile');
     formData.set('religionIds', selectedReligionIds.join(','));
     formData.set('godIds', selectedGodIds.join(','));
-    // Append opening hours JSON
     const openingHoursJson: Record<string, string> = {};
     Object.entries(dailyHours).forEach(([day, hours]) => {
         if (!hours.isClosed && hours.open && hours.close) {
-            openingHoursJson[day] = `${hours.open}-${hours.close}`;
+            openingHoursJson[day.toLowerCase()] = `${hours.open}-${hours.close}`;
         }
     });
     formData.set('openingHours', JSON.stringify(openingHoursJson));
-    // Append selected services data
     formData.set('listingServicesData', JSON.stringify(selectedServices));
-    // Append listing ID if in edit mode (already in hidden input)
-    // formData.set('listingId', initialData?.listing_id ?? ''); 
 
+    // Call the server action directly
+    console.log("Submitting form data to server action...");
+    // formAction handles the logic now, including Paywall URL generation
     formAction(formData);
+    // No need to await or handle payment result here anymore
+    // Loading state (isSubmitting) will be managed by the useEffect hook monitoring formState
   };
 
   // Determine if fields are required based on type
@@ -320,11 +371,19 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
   // --- Render --- 
   return (
       <form onSubmit={handleFormSubmit} className="space-y-6">
-          {/* Display Server Action Messages */}
-          {formState?.message && (
-              <div className={`p-3 rounded-md ${formState.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {formState.message}
-              </div>
+          {/* Display Server Action/Form Errors */}
+          {(formError || (formState && !formState.success && formState.message && !isSubmitting)) && (
+              <Alert variant="destructive">
+                <AlertTitle>錯誤</AlertTitle>
+                <AlertDescription>{formError || formState?.message}</AlertDescription>
+              </Alert>
+          )}
+          {/* Display Server Action Success Message (before potential redirect) */}
+          {formState?.success && formState.message && (
+              <Alert variant="default">
+                { /* Optional: Add an icon like CheckCircle */ }
+                <AlertDescription>{formState.message}</AlertDescription>
+              </Alert>
           )}
           
           {/* Hidden input for listingId in edit mode */} 
@@ -524,7 +583,14 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
             
           {/* Form Footer for Submit Button */}
           <div className="flex justify-end pt-6 border-t">
-                <SubmitButton mode={mode} />
+                <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            處理中...
+                        </>
+                    ) : (mode === 'create' ? '提交創建' : '儲存更改')}
+                </Button>
           </div>
       </form>
   );

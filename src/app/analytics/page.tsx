@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Loader2 } from 'lucide-react'; // Added Loader2
+import { Pencil, Trash2, Loader2, Eye, EyeOff } from 'lucide-react'; // Added Loader2 and Eye icons
 import {
     Dialog,
     DialogContent,
@@ -34,15 +34,28 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { deleteListingAction } from './actions'; // <-- Import the delete action
+import { deleteListingAction, toggleListingVisibilityAction } from './actions'; // <-- Import the delete action and toggle visibility action
+import { Badge } from "@/components/ui/badge"; // <-- Import Badge for status
+import { useTransition } from 'react'; // <-- Import useTransition
 
-// Define a type for the fetched listing data - Add tag
+// Define a type for the fetched listing data - Add tag and status
 interface UserListing {
   listing_id: string;
   listing_name: string;
   created_at: string;
   state?: { state_name: string; } | null;
   tag?: { tag_name: string; } | null; // <-- Add tag field
+  status: string; // <-- Add status field (e.g., 'PENDING', 'LIVE', 'HIDING')
+}
+
+// Define expected raw data shape - Add status
+interface RawListingItem {
+    listing_id: string;
+    listing_name: string;
+    created_at: string;
+    state: { state_name: string; } | { state_name: string; }[] | null;
+    tag: { tag_name: string; } | null; 
+    status: string; // <-- ADDED status field here
 }
 
 export default function AnalyticsPage() {
@@ -62,6 +75,10 @@ export default function AnalyticsPage() {
     const [deleteConfirmationText, setDeleteConfirmationText] = useState("");
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // State for Toggle Visibility
+    const [isTogglingVisibility, startTransition] = useTransition();
+    const [togglingListingId, setTogglingListingId] = useState<string | null>(null);
 
     // Fetch user data on mount
     useEffect(() => {
@@ -90,20 +107,12 @@ export default function AnalyticsPage() {
             const fetchListings = async () => {
                 setLoadingListings(true);
                 setFetchError(null);
-                 // Define expected shape for raw data explicitly
-                 interface RawListingItem {
-                    listing_id: string;
-                    listing_name: string;
-                    created_at: string;
-                    state: { state_name: string; } | { state_name: string; }[] | null;
-                    tag: { tag_name: string; } | { tag_name: string; }[] | null; 
-                 }
                 const { data: rawData, error } = await supabase
                     .from('listings')
-                    .select('listing_id, listing_name, created_at, state:state_id(state_name), tag:tag_id(tag_name)')
+                    .select('listing_id, listing_name, created_at, state:state_id(state_name), tag:tag_id(tag_name), status')
                     .eq('owner_id', user.id)
                     .order('created_at', { ascending: false })
-                    .returns<RawListingItem[]>(); // Use the explicit raw type
+                    .returns<RawListingItem[]>();
                 
                 if (error) {
                     console.error("Error fetching user listings:", error);
@@ -117,7 +126,8 @@ export default function AnalyticsPage() {
                         created_at: item.created_at,
                         // Handle potential array/object/null from join
                         state: Array.isArray(item.state) ? item.state[0] ?? null : item.state ?? null,
-                        tag: Array.isArray(item.tag) ? item.tag[0] ?? null : item.tag ?? null
+                        tag: Array.isArray(item.tag) ? item.tag[0] ?? null : item.tag ?? null,
+                        status: item.status // Should now be correctly typed
                     }));
                     setListings(formattedListings);
                 } else {
@@ -132,6 +142,28 @@ export default function AnalyticsPage() {
             setLoadingListings(false); 
         }
     }, [user, supabase]); // Re-fetch if user changes
+
+    // --- Toggle Visibility Handler ---
+    const handleToggleVisibility = async (listingId: string, currentStatus: string) => {
+        setTogglingListingId(listingId); // Set which row is loading
+        startTransition(async () => {
+            const result = await toggleListingVisibilityAction(listingId, currentStatus);
+            if (result.success && result.newStatus) {
+                // Update local state for immediate feedback
+                setListings(prev => 
+                    prev.map(l => 
+                        l.listing_id === listingId ? { ...l, status: result.newStatus! } : l
+                    )
+                );
+                // Optional: show success toast
+            } else {
+                // Optional: show error toast
+                console.error("Toggle visibility failed:", result.message);
+                alert(`Error toggling visibility: ${result.message}`); // Simple alert for now
+            }
+             setTogglingListingId(null); // Clear loading state for the row
+        });
+    };
 
     // --- Delete Logic --- 
     const openDeleteDialog = (listingId: string, listingName: string) => {
@@ -211,11 +243,12 @@ export default function AnalyticsPage() {
                         <TableCaption>{listings.length > 0 ? '您創建的列表。' : '您還沒有創建任何列表。'} ({listings.length} listings total)</TableCaption>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[15%]">類型</TableHead>
-                                <TableHead className="w-[35%]">名稱</TableHead>
-                                <TableHead>狀態</TableHead>
-                                <TableHead>創建時間</TableHead>
-                                <TableHead className="text-right">操作</TableHead>
+                                <TableHead className="w-[15%]">類型 (Type)</TableHead>
+                                <TableHead className="w-[30%]">名稱 (Name)</TableHead>
+                                <TableHead>狀態 (State)</TableHead>
+                                <TableHead>審批狀態 (Status)</TableHead>
+                                <TableHead>創建時間 (Created)</TableHead>
+                                <TableHead className="text-right">操作 (Actions)</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -229,8 +262,38 @@ export default function AnalyticsPage() {
                                             </Link>
                                         </TableCell>
                                         <TableCell>{listing.state?.state_name ?? 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Badge 
+                                                variant={ 
+                                                    listing.status === 'LIVE' ? 'default' : 
+                                                    listing.status === 'HIDING' ? 'secondary' : 
+                                                    listing.status === 'PENDING' ? 'outline' : 
+                                                    'destructive' // Default for REJECTED or unknown
+                                                }
+                                            >
+                                                {listing.status}
+                                            </Badge>
+                                        </TableCell>
                                         <TableCell>{new Date(listing.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right space-x-2">
+                                            {(listing.status === 'LIVE' || listing.status === 'HIDING') && (
+                                                <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8" 
+                                                    title={listing.status === 'LIVE' ? 'Hide Listing' : 'Show Listing'}
+                                                    onClick={() => handleToggleVisibility(listing.listing_id, listing.status)}
+                                                    disabled={isTogglingVisibility && togglingListingId === listing.listing_id}
+                                                >
+                                                   {(isTogglingVisibility && togglingListingId === listing.listing_id) ? (
+                                                       <Loader2 className="h-4 w-4 animate-spin" />
+                                                   ) : listing.status === 'LIVE' ? (
+                                                       <Eye className="h-4 w-4" />
+                                                    ) : (
+                                                        <EyeOff className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            )}
                                             <Link href={`/analytics/edit/${listing.listing_id}`} passHref>
                                                 <Button variant="outline" size="icon" className="h-8 w-8" title="Edit Listing">
                                                     <Pencil className="h-4 w-4" />
@@ -252,7 +315,7 @@ export default function AnalyticsPage() {
                                 ))
                             ) : (
                                 <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                         您還沒有創建任何列表。
                                         <Link href="/analytics/create" className="text-primary hover:underline ml-2">
                                             現在創建一個！

@@ -4,7 +4,6 @@ import { createClient } from '@/lib/supabase/server';
 import { createServerClient as createAdminSupabaseClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import type { Database } from '@/lib/database.types'; 
 
 // ... interface CreateListingResult ...
@@ -72,9 +71,9 @@ export async function deleteListingAction(listingId: string): Promise<DeleteList
             supabaseAdmin.from('listing_hashtags').delete().eq('listing_id', listingId),
         ]);
         console.log(`Associated data deleted for listing ${listingId}.`);
-    } catch (linkError: any) {
+    } catch (linkError: unknown) {
         console.error(`Error deleting associated data for listing ${listingId}:`, linkError);
-        return { success: false, message: `刪除關聯數據時出錯: ${linkError.message}` };
+        return { success: false, message: `刪除關聯數據時出錯: ${linkError instanceof Error ? linkError.message : String(linkError)}` };
     }
 
     // 4. Delete Listing Icon from Storage (using Admin client)
@@ -94,7 +93,7 @@ export async function deleteListingAction(listingId: string): Promise<DeleteList
             } else {
                  console.warn(`Could not extract path from icon URL: ${iconUrlToDelete}`);
             }
-        } catch (storageError: any) {
+        } catch (storageError: unknown) {
             console.error("Exception during icon deletion:", storageError);
              // Log error but don't block listing deletion maybe?
         }
@@ -119,4 +118,59 @@ export async function deleteListingAction(listingId: string): Promise<DeleteList
     revalidatePath('/analytics');
 
     return { success: true, message: "列表已成功刪除。(Listing deleted successfully.)" };
+}
+
+// --- Toggle Visibility Action Result Type ---
+interface ToggleVisibilityResult {
+    success: boolean;
+    message: string;
+    newStatus?: 'LIVE' | 'HIDING'; // Return the new status
+}
+
+// --- Toggle Visibility Server Action ---
+export async function toggleListingVisibilityAction(
+    listingId: string,
+    currentStatus: string // Pass current status to determine the target status
+): Promise<ToggleVisibilityResult> {
+    if (!listingId || (currentStatus !== 'LIVE' && currentStatus !== 'HIDING')) {
+        return { success: false, message: "無效的操作。(Invalid action.)" };
+    }
+
+    const supabase = createClient(); // User context client
+
+    // 1. Get User
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+        return { success: false, message: "需要驗證身份。(Authentication required.)" };
+    }
+
+    // 2. Determine New Status
+    const newStatus = currentStatus === 'LIVE' ? 'HIDING' : 'LIVE';
+
+    // 3. Update Listing Status (Verify Ownership during update)
+    console.log(`Attempting to set status to ${newStatus} for listing ${listingId} by user ${user.id}`);
+    const { error: updateError } = await supabase
+        .from('listings')
+        .update({ 
+            status: newStatus,
+            updated_at: new Date().toISOString() 
+        })
+        .eq('listing_id', listingId)
+        .eq('owner_id', user.id); // Ensure user owns the listing they're toggling
+
+    if (updateError) {
+        console.error("Error toggling listing visibility:", updateError);
+        return { success: false, message: `切換顯示狀態失敗: ${updateError.message}` };
+    }
+
+    console.log(`Listing ${listingId} status toggled to ${newStatus}`);
+
+    // 4. Revalidate Path
+    revalidatePath('/analytics');
+    // Also revalidate detail page if public visibility changed
+    if (newStatus === 'LIVE' || currentStatus === 'LIVE') { 
+        revalidatePath(`/detail/${listingId}`);
+    }
+
+    return { success: true, message: `狀態已更新為 ${newStatus}。(Status updated to ${newStatus}.)`, newStatus: newStatus };
 } 
