@@ -45,60 +45,65 @@ async function getListingDataForEdit(listingId: string): Promise<ListingFormData
         return null;
     }
 
-    // Fetch Associated Data - Use generated types
-    const [
-        { data: religionsData, error: religionsError },
-        { data: godsData, error: godsError },
-        { data: servicesData, error: servicesError }
-    ] = await Promise.all([
-        supabase.from('listing_religions').select('religion_id').eq('listing_id', listingId).returns<Pick<ReligionRow, 'religion_id'>[]>(),
-        supabase.from('listing_gods').select('god_id').eq('listing_id', listingId).returns<Pick<GodRow, 'god_id'>[]>(),
-        supabase.from('listing_services').select('service_id, price, custom_description, service:services(service_name)').eq('listing_id', listingId).returns<FetchedServiceJoin[]>()
-    ]);
+    // --> Associated data fetching and formatting inside this block <--
+    try {
+        // Assign to a new const to potentially help TS inference
+        const validListing = listing;
 
-    if (religionsError || godsError || servicesError) {
-        console.error('Edit Fetch Error - Associated:', { religionsError, godsError, servicesError });
-        // Handle potential partial failures if needed
+        // Fetch Associated Data - Use generated types
+        const [
+            { data: religionsData, error: religionsError },
+            { data: godsData, error: godsError },
+            { data: servicesData, error: servicesError }
+        ] = await Promise.all([
+            supabase.from('listing_religions').select('religion_id').eq('listing_id', listingId).returns<Pick<ReligionRow, 'religion_id'>[]>(),
+            supabase.from('listing_gods').select('god_id').eq('listing_id', listingId).returns<Pick<GodRow, 'god_id'>[]>(),
+            supabase.from('listing_services').select('service_id, price, custom_description, service:services(service_name)').eq('listing_id', listingId).returns<FetchedServiceJoin[]>()
+        ]);
+
+        if (religionsError || godsError || servicesError) {
+            console.error('Edit Fetch Error - Associated:', { religionsError, godsError, servicesError });
+            // Even if associated data fails, we might still want to return the main listing data
+            // Or decide to return null based on how critical this associated data is
+        }
+
+        // Format Data for the Form - Explicitly map fields
+        // Now TypeScript knows 'validListing' is valid here
+        const formattedData: ListingFormData = {
+            listing_id: (listing as ListingRow).listing_id, // Use type assertion
+            listing_name: (listing as ListingRow).listing_name ?? '',
+            description: (listing as ListingRow).description ?? '',
+            location: (listing as ListingRow).location ?? '',
+            lat: (listing as ListingRow).lat,
+            lng: (listing as ListingRow).lng,
+            phone: (listing as ListingRow).phone ?? '',
+            email: (listing as ListingRow).email ?? '',
+            website: (listing as ListingRow).website ?? '',
+            facebook: (listing as ListingRow).facebook ?? '',
+            instagram: (listing as ListingRow).instagram ?? '',
+            whatsapp: (listing as ListingRow).whatsapp ?? '',
+            xiaohongshu: (listing as ListingRow).xiaohongshu ?? '',
+            google_map_link: (listing as ListingRow).google_map_link ?? '',
+            state_id: (listing as ListingRow).state_id ?? '', 
+            tag_id: (listing as ListingRow).tag_id?.toString() ?? '', 
+            icon: (listing as ListingRow).icon,
+            opening_hours: (listing as ListingRow).opening_hours as Record<string, string> | null,
+            selected_religions: religionsData?.map(r => r.religion_id) ?? [],
+            selected_gods: godsData?.map(g => g.god_id) ?? [],
+            selected_services_data: servicesData?.map(s => ({
+                service_id: s.service_id,
+                service_name: s.service?.service_name ?? 'Unknown',
+                price: s.price?.toString() ?? '', 
+                custom_description: s.custom_description ?? '',
+            })) ?? [],
+        };
+
+        return formattedData;
+
+    } catch (error) {
+        console.error('Error during associated data fetch or formatting:', error);
+        return null; // Return null if anything fails after finding the main listing
     }
-
-    // Add explicit check for listing before accessing properties
-    if (!listing) {
-        console.error('Error: Listing became null unexpectedly before formatting.');
-        return null; // Should technically not happen due to earlier check, but satisfies TS
-    }
-
-    // Format Data for the Form - Explicitly map fields
-    const formattedData: ListingFormData = {
-        listing_id: listing.listing_id,
-        listing_name: listing.listing_name ?? '',
-        description: listing.description ?? '',
-        location: listing.location ?? '',
-        lat: listing.lat,
-        lng: listing.lng,
-        phone: listing.phone ?? '',
-        email: listing.email ?? '',
-        website: listing.website ?? '',
-        facebook: listing.facebook ?? '',
-        instagram: listing.instagram ?? '',
-        whatsapp: listing.whatsapp ?? '',
-        xiaohongshu: listing.xiaohongshu ?? '',
-        google_map_link: listing.google_map_link ?? '',
-        state_id: listing.state_id ?? '', 
-        tag_id: listing.tag_id?.toString() ?? '', 
-        icon: listing.icon,
-        opening_hours: listing.opening_hours as Record<string, string> | null, // Cast might still be needed for jsonb
-        selected_religions: religionsData?.map(r => r.religion_id) ?? [],
-        selected_gods: godsData?.map(g => g.god_id) ?? [],
-        selected_services_data: servicesData?.map(s => ({
-            service_id: s.service_id,
-            service_name: s.service?.service_name ?? 'Unknown',
-            price: s.price?.toString() ?? '', 
-            custom_description: s.custom_description ?? '',
-        })) ?? [],
-        // state object with region_id is handled internally by ListingForm now
-    };
-
-    return formattedData;
 }
 
 // Edit Page Component
