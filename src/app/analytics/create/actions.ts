@@ -42,7 +42,6 @@ interface ListingInsertData {
   icon?: string | null;
   opening_hours?: Record<string, string> | null;
   owner_id: string;
-  classifier?: 'PROSERVICE' | null;
   revenuecat_product_id?: string | null;
   revenuecat_entitlement_id?: string | null;
   subscription_start_date?: string | null; // ISO string or null
@@ -113,7 +112,7 @@ export async function createListingAction(
   // Determine the tag and type
   const tagId = tagIdString ? parseInt(tagIdString, 10) : null;
   const isProService = tagId === 2;
-  const finalStatus = isProService ? 'PENDING' : 'LIVE'; // PENDING for PROSERVICE, LIVE otherwise
+  const finalStatus = 'PENDING'; // Always set to PENDING initially
 
   // Basic validation (more robust validation needed in production)
   if (!name || !description || !stateId || !tagId) {
@@ -205,7 +204,6 @@ export async function createListingAction(
     icon: iconUrl,
     opening_hours: parsedOpeningHours,
     owner_id: ownerId, // <-- Set owner_id from authenticated user
-    classifier: isProService ? 'PROSERVICE' : null,
     status: finalStatus // Set status based on type ('PENDING' or 'LIVE')
   };
 

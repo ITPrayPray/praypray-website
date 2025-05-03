@@ -98,6 +98,8 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
   const [phone, setPhone] = useState(initialData?.phone ?? '');
   const [email, setEmail] = useState(initialData?.email ?? '');
   const [website, setWebsite] = useState(initialData?.website ?? '');
+  const [facebook, setFacebook] = useState(initialData?.facebook ?? '');
+  const [instagram, setInstagram] = useState(initialData?.instagram ?? '');
   const [whatsapp, setWhatsapp] = useState(initialData?.whatsapp ?? '');
   const [xiaohongshu, setXiaohongshu] = useState(initialData?.xiaohongshu ?? '');
   const [googleMapLink, setGoogleMapLink] = useState(initialData?.google_map_link ?? '');
@@ -524,6 +526,8 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label htmlFor="website">網站</Label><Input id="website" name="website" type="url" placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="facebook">Facebook</Label><Input id="facebook" name="facebook" type="url" placeholder="輸入 Facebook 頁面連結" value={facebook} onChange={(e) => setFacebook(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="instagram">Instagram</Label><Input id="instagram" name="instagram" type="url" placeholder="輸入 Instagram 頁面連結" value={instagram} onChange={(e) => setInstagram(e.target.value)} /></div>
               <div className="space-y-2"><Label htmlFor="whatsapp">WhatsApp</Label><Input id="whatsapp" name="whatsapp" placeholder="輸入 WhatsApp 號碼/連結" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} /></div>
            </div>
            <div className="space-y-2">

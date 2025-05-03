@@ -250,7 +250,7 @@ export const KeyInformation: React.FC<KeyInformationProps> = ({
             disabled={!instagram}
           >
             {instagram ? (
-              <a href={`https://www.instagram.com/${instagram}`} target="_blank" rel="noopener noreferrer">
+              <a href={instagram} target="_blank" rel="noopener noreferrer">
                 <Instagram className="h-4 w-4" />
               </a>
             ) : (
