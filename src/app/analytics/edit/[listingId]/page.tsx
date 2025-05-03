@@ -61,6 +61,12 @@ async function getListingDataForEdit(listingId: string): Promise<ListingFormData
         // Handle potential partial failures if needed
     }
 
+    // Add explicit check for listing before accessing properties
+    if (!listing) {
+        console.error('Error: Listing became null unexpectedly before formatting.');
+        return null; // Should technically not happen due to earlier check, but satisfies TS
+    }
+
     // Format Data for the Form - Explicitly map fields
     const formattedData: ListingFormData = {
         listing_id: listing.listing_id,
