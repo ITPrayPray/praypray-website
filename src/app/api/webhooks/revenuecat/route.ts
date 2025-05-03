@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Restore Supabase client initialization
-const supabaseUrl = process.env.SUPABASE_URL!; // Assuming NEXT_PUBLIC prefix is NOT needed for server-side
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!; // Use Service Role Key for admin actions
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!; // Use NEXT_PUBLIC_ prefix
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!; // Use SERVICE_ROLE_KEY
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey, {
   auth: {
