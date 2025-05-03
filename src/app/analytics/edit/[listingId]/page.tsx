@@ -47,9 +47,6 @@ async function getListingDataForEdit(listingId: string): Promise<ListingFormData
 
     // --> Associated data fetching and formatting inside this block <--
     try {
-        // Assign to a new const to potentially help TS inference
-        const validListing = listing;
-
         // Fetch Associated Data - Use generated types
         const [
             { data: religionsData, error: religionsError },
@@ -68,7 +65,7 @@ async function getListingDataForEdit(listingId: string): Promise<ListingFormData
         }
 
         // Format Data for the Form - Explicitly map fields
-        // Now TypeScript knows 'validListing' is valid here
+        // Now TypeScript knows 'listing' is valid here
         const formattedData: ListingFormData = {
             listing_id: (listing as ListingRow).listing_id, // Use type assertion
             listing_name: (listing as ListingRow).listing_name ?? '',
