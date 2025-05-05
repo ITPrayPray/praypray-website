@@ -1,8 +1,9 @@
 // src/app/analytics/page.tsx
 'use client'; // <-- Make it a Client Component
 
-import React, { useState, useEffect } from 'react'; // <-- Import useState, useEffect
+import React, { useState, useEffect, useTransition } from 'react'; // <-- Import useState, useEffect, useTransition
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // <-- Import useRouter
 import { Button } from '@/components/ui/button';
 // import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'; // No longer needed
 // import { cookies } from 'next/headers'; // No longer needed
@@ -19,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Loader2, Eye, EyeOff } from 'lucide-react'; // Added Loader2 and Eye icons
+import { Pencil, Trash2, Loader2, Eye, EyeOff, PlusCircle } from 'lucide-react'; // Added Loader2, Eye, and PlusCircle icons
 import {
     Dialog,
     DialogContent,
@@ -36,7 +37,6 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { deleteListingAction, toggleListingVisibilityAction } from './actions'; // <-- Import the delete action and toggle visibility action
 import { Badge } from "@/components/ui/badge"; // <-- Import Badge for status
-import { useTransition } from 'react'; // <-- Import useTransition
 
 // Define a type for the fetched listing data - Add tag and status
 interface UserListing {
@@ -60,6 +60,7 @@ interface RawListingItem {
 
 export default function AnalyticsPage() {
     const supabase = createClient();
+    const router = useRouter(); // <-- Initialize useRouter
     // Manage user state locally since it's a client component
     const [user, setUser] = useState<User | null>(null); // <-- Use specific type
     const [loadingUser, setLoadingUser] = useState(true);
@@ -79,6 +80,9 @@ export default function AnalyticsPage() {
     // State for Toggle Visibility
     const [isTogglingVisibility, startTransition] = useTransition();
     const [togglingListingId, setTogglingListingId] = useState<string | null>(null);
+
+    // ---> State for Create Type Selection Dialog <--- 
+    const [isCreateTypeDialogOpen, setIsCreateTypeDialogOpen] = useState(false);
 
     // Fetch user data on mount
     useEffect(() => {
@@ -199,6 +203,17 @@ export default function AnalyticsPage() {
     // Check if the final delete button should be enabled
     const canConfirmDelete = isDeleteConfirmed && deleteConfirmationText === 'DELETE';
 
+    // ---> Navigation Handlers for Create Types <--- 
+    const goToCreateTemple = () => {
+        setIsCreateTypeDialogOpen(false); // Close dialog first
+        router.push('/analytics/create/temple');
+    };
+
+    const goToCreateProservice = () => {
+        setIsCreateTypeDialogOpen(false); // Close dialog first
+        router.push('/analytics/create/proservice');
+    };
+
     // --- Render Page --- 
     if (loadingUser) {
         // Optional: Show a full page loading spinner or skeleton
@@ -206,14 +221,35 @@ export default function AnalyticsPage() {
     }
 
     return (
+    <>
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <div className="p-6">
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">{user ? '我的列表 (My Listings)' : '列表管理 (Listings Management)'}</h1>
                 {user && (
-                    <Link href="/analytics/create" passHref>
-                        <Button>創建新列表 (Create New Listing)</Button>
-                    </Link>
+                    <Dialog open={isCreateTypeDialogOpen} onOpenChange={setIsCreateTypeDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button><PlusCircle className="mr-2 h-4 w-4" /> 創建新列表 (Create New Listing)</Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                                <DialogTitle>選擇列表類型 (Select Listing Type)</DialogTitle>
+                                <DialogDescription>
+                                    您想創建哪種類型的列表？ (Which type of listing would you like to create?)
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid grid-cols-1 gap-4 py-4">
+                                <Button variant="outline" onClick={goToCreateTemple} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
+                                    <span className="text-base">創建廟宇 (Create Temple)</span>
+                                    <span className="text-xs text-muted-foreground text-center px-2">適合廟宇、神壇等宗教場所。</span>
+                                </Button>
+                                <Button variant="outline" onClick={goToCreateProservice} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
+                                    <span className="text-base">創建專業服務 (Create Pro Service)</span>
+                                    <span className="text-xs text-muted-foreground text-center px-2">適合算命、風水、法事等專業服務提供者。</span>
+                                </Button>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
                 )}
             </div>
 
@@ -317,9 +353,6 @@ export default function AnalyticsPage() {
                                 <TableRow>
                                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                                         您還沒有創建任何列表。
-                                        <Link href="/analytics/create" className="text-primary hover:underline ml-2">
-                                            現在創建一個！
-                                        </Link>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -380,6 +413,7 @@ export default function AnalyticsPage() {
             </DialogContent>
         </div>
       </Dialog>
+    </>
     );
 }
   

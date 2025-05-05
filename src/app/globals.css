@@ -83,3 +83,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Add custom badge style for PROSERVICE */
+.badge-proservice {
+  background-color: #000080 !important; /* Navy Blue, force base color */
+  color: white !important; /* Force base text color */
+}
+
+/* Force hover state for our custom badge */
+.badge-proservice:hover {
+  background-color: #000066 !important; /* Darker Navy on hover, force */
+  color: white !important; /* Ensure text stays white */
+}
+
+/* ---> Make hover rule more specific <--- */
+/* Target the secondary variant specifically when our custom class is present */
+.badge-proservice[data-variant="secondary"]:hover {
+  background-color: #000066 !important; /* Darker Navy on hover, add !important */
+  color: white !important; /* Ensure text color stays white */
+}

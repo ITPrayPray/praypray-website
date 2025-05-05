@@ -72,6 +72,8 @@ interface ListingFormProps {
     mode: 'create' | 'edit';
     // Pass the specific server action (create or update)
     formActionFn: (prevState: FormActionResult | undefined, formData: FormData) => Promise<FormActionResult>;
+    // ---> ADDED: Receive the type as a prop <--- 
+    listingType: 'TEMPLE' | 'PROSERVICE';
 }
 
 // Initial state for useFormState
@@ -83,7 +85,7 @@ const initialFormState: FormActionResult = {
 };
 
 // --- Reusable Form Component --- 
-export function ListingForm({ initialData, mode, formActionFn }: ListingFormProps) {
+export function ListingForm({ initialData, mode, formActionFn, listingType }: ListingFormProps) {
   const supabase = createClient();
   // Remove RevenueCat instance state
   // const [purchasesInstance, setPurchasesInstance] = useState<Purchases | null>(null);
@@ -103,7 +105,6 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
   const [whatsapp, setWhatsapp] = useState(initialData?.whatsapp ?? '');
   const [xiaohongshu, setXiaohongshu] = useState(initialData?.xiaohongshu ?? '');
   const [googleMapLink, setGoogleMapLink] = useState(initialData?.google_map_link ?? '');
-  const [tagId, setTagId] = useState(initialData?.tag_id ?? ''); 
   const [stateId, setStateId] = useState(initialData?.state_id ?? ''); 
 
   // Icon handling
@@ -161,8 +162,8 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
 
   // Remove RevenueCat specific states
   // const [selectedProductId, setSelectedProductId] = useState<string>(DEFAULT_PROSERVICE_PRODUCT_ID);
-  const [isSubmitting, setIsSubmitting] = useState<boolean>(false); // Use general submitting state
-  const [formError, setFormError] = useState<string | null>(null); // General form error state
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string | null>(null);
   // const [revenueCatInitialized, setRevenueCatInitialized] = useState<boolean>(false);
   // const supabaseUser = useRef<User | null>(null); // No longer needed here
 
@@ -347,6 +348,11 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
     // Append necessary data not directly part of standard inputs
     if (iconFile) formData.append('iconFile', iconFile);
     else formData.delete('iconFile');
+    
+    // ---> ADDED: Set tagId based on listingType prop <--- 
+    const tagIdValue = listingType === 'TEMPLE' ? '1' : '2';
+    formData.set('tagId', tagIdValue);
+
     formData.set('religionIds', selectedReligionIds.join(','));
     formData.set('godIds', selectedGodIds.join(','));
     const openingHoursJson: Record<string, string> = {};
@@ -359,16 +365,13 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
     formData.set('listingServicesData', JSON.stringify(selectedServices));
 
     // Call the server action directly
-    console.log("Submitting form data to server action...");
-    // formAction handles the logic now, including Paywall URL generation
+    console.log(`Submitting form data for ${listingType} to server action...`);
     formAction(formData);
-    // No need to await or handle payment result here anymore
-    // Loading state (isSubmitting) will be managed by the useEffect hook monitoring formState
   };
 
-  // Determine if fields are required based on type
-  const isTemple = tagId === '1';
-  const isProservice = tagId === '2';
+  // ---> UPDATED: Determine if fields are required based on listingType prop <--- 
+  const isTemple = listingType === 'TEMPLE';
+  const isProservice = listingType === 'PROSERVICE';
 
   // --- Render --- 
   return (
@@ -416,15 +419,17 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
               </div>
               <p className="text-sm text-muted-foreground">上傳一個方形圖標。</p>
            </div>
-          {/* Listing Type */}
+           {/* Display the determined type (optional) */}
            <div className="space-y-2">
-              <Label>列表類型 <span className="text-red-500">*</span></Label>
-              <ToggleGroup type="single" value={tagId} onValueChange={(v) => v && setTagId(v)} className="flex flex-wrap gap-2 justify-start" aria-required="true">
-                  <ToggleGroupItem key="1" value="1" aria-label="Select TEMPLE" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">TEMPLE</ToggleGroupItem>
-                  <ToggleGroupItem key="2" value="2" aria-label="Select PROSERVICE" className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">PROSERVICE</ToggleGroupItem>
-              </ToggleGroup>
-              <input type="hidden" name="tagId" value={tagId} />
-              <p className="text-sm text-muted-foreground">請選擇列表類型。</p>
+               <Label>列表類型 (Listing Type)</Label>
+               <Badge 
+                   variant={listingType === 'TEMPLE' ? 'default' : 'secondary'} 
+                   className={cn(
+                       listingType === 'PROSERVICE' && 'badge-proservice' // Add custom class
+                   )}
+               >
+                   {listingType}
+               </Badge>
            </div>
           {/* Name */}
            <div className="space-y-2">
@@ -521,8 +526,8 @@ export function ListingForm({ initialData, mode, formActionFn }: ListingFormProp
               <div className="space-y-2"><Label htmlFor="lng">經度</Label><Input id="lng" name="lng" type="number" step="any" placeholder="例如 101.6869" value={lng} onChange={(e) => setLng(e.target.value === '' ? '' : parseFloat(e.target.value))} /></div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2"><Label htmlFor="phone">電話 {isProservice && <span className="text-red-500">*</span>}</Label><Input id="phone" name="phone" type="tel" placeholder="輸入電話號碼" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-              <div className="space-y-2"><Label htmlFor="email">電子郵件 {isProservice && <span className="text-red-500">*</span>}</Label><Input id="email" name="email" type="email" placeholder="輸入電子郵件地址" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="phone">電話 {isProservice && <span className="text-red-500">*</span>}</Label><Input id="phone" name="phone" type="tel" placeholder="輸入電話號碼" value={phone} onChange={(e) => setPhone(e.target.value)} required={isProservice} /></div>
+              <div className="space-y-2"><Label htmlFor="email">電子郵件 {isProservice && <span className="text-red-500">*</span>}</Label><Input id="email" name="email" type="email" placeholder="輸入電子郵件地址" value={email} onChange={(e) => setEmail(e.target.value)} required={isProservice} /></div>
            </div>
            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2"><Label htmlFor="website">網站</Label><Input id="website" name="website" type="url" placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} /></div>
