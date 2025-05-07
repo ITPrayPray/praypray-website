@@ -108,9 +108,17 @@ export default async function EditListingPage({ params }: { params: { listingId:
   const listingId = params.listingId;
   const initialData = await getListingDataForEdit(listingId);
 
-  if (!initialData) {
-    // Handle case where listing not found or user doesn't own it
-    notFound(); // Or show an access denied message
+  if (!initialData || !initialData.tag_id) { // Also check if tag_id is present
+    notFound();
+  }
+
+  // ---> Determine listingType from initialData.tag_id <--- 
+  const listingType = initialData.tag_id === '1' ? 'TEMPLE' : initialData.tag_id === '2' ? 'PROSERVICE' : undefined;
+
+  if (!listingType) {
+    // Handle cases where tag_id is missing or invalid from the fetched data
+    console.error(`Invalid or missing tag_id: ${initialData.tag_id} for listing ${listingId}`);
+    notFound(); // Or show an error message
   }
 
   return (
@@ -133,6 +141,7 @@ export default async function EditListingPage({ params }: { params: { listingId:
                     mode="edit" 
                     initialData={initialData}
                     formActionFn={updateListingAction} 
+                    listingType={listingType} // ---> Pass the determined listingType <--- 
                 />
             </CardContent>
         </Card>
