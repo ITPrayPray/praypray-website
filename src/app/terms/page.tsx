@@ -10,7 +10,6 @@ export default function TermsAndConditionsPage() {
                 <p className="text-muted-foreground">
                     [以下 Terms and Conditions（以下簡稱「本條款」）規範使用本 Web App（以下簡稱「本平台」）之所有 Users 行為，包含探索 religious spots 的使用者，以及寺廟擁有者（Temple Owners）與宗教服務提供者（Service Providers）之 Listings 創建與管理。平台僅對 Service Providers 收取 listing fee，寺廟擁有者及一般使用者免費使用。 ] 
                     <br />
-                    [Terms & Conditions content will be added here...]
                 </p>
              
                 {/* Example Sections (remove or replace) */}
