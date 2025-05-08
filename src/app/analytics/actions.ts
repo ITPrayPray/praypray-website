@@ -230,25 +230,29 @@ export async function createProserviceListingAction(
     if (result.success && result.listingId) {
         // --- RevenueCat Logic --- 
         const revenueCatPaywallBaseUrl = process.env.REVENUECAT_PROSERVICE_PAYWALL_URL;
+        
+        // ---> Log the environment variable value <--- 
+        console.log(`Read REVENUECAT_PROSERVICE_PAYWALL_URL: ${revenueCatPaywallBaseUrl}`);
+
         if (!revenueCatPaywallBaseUrl) {
             console.error('RevenueCat Paywall URL is not configured (REVENUECAT_PROSERVICE_PAYWALL_URL).');
-            // Return success but indicate config error? Or fail?
-            // Failing seems safer to ensure payment flow is intended.
             return { success: false, message: '支付配置錯誤，請聯繫管理員。 (Payment config error)' };
         }
 
         try {
             const encodedAppUserId = encodeURIComponent(user.id);
-            let paywallUrl = `${revenueCatPaywallBaseUrl}/${encodedAppUserId}`; // Base URL includes the token
+            let paywallUrl = `${revenueCatPaywallBaseUrl}/${encodedAppUserId}`; 
 
-            // Optional: Add email
             if (user.email) {
                 const encodedEmail = encodeURIComponent(user.email);
                 paywallUrl += (paywallUrl.includes('?') ? '&' : '?') + `email=${encodedEmail}`;
             }
+            
+            // ---> Log the constructed URL <--- 
+            console.log(`Constructed Paywall URL for redirect: ${paywallUrl}`);
 
-            console.log(`Redirecting PROSERVICE user ${user.id} to paywall: ${paywallUrl}`);
-            revalidatePath('/analytics'); // Revalidate the listings page
+            console.log(`Redirecting PROSERVICE user ${user.id} to paywall...`); // Keep original log too
+            revalidatePath('/analytics');
             return {
                 success: true,
                 message: '專業服務列表已創建！正在重定向到付款... (Pro Service listing created! Redirecting...)',
