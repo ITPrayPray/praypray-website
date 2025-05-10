@@ -226,32 +226,36 @@ export async function createProserviceListingAction(
         return { success: false, message: '用戶未驗證。(User not authenticated.)' };
     }
 
-    console.log("Executing createProserviceListingAction for user:", user.id);
+    console.log("PROSERVICE_ACTION: Executing for user:", user.id);
 
-    // ---> 1. Check for existing active PROSERVICE subscription <--- 
-    const YOUR_PROSERVICE_PLAN_ID = 2; // !!! REPLACE WITH YOUR ACTUAL PLAN ID FOR PROSERVICE !!!
+    const YOUR_PROSERVICE_PLAN_ID = 2; 
     const currentDate = new Date().toISOString();
 
-    console.log(`Checking for active subscription for user ${user.id}, plan_id ${YOUR_PROSERVICE_PLAN_ID}`);
+    console.log(`PROSERVICE_ACTION: Checking for active subscription - User: ${user.id}, PlanID: ${YOUR_PROSERVICE_PLAN_ID}, CurrentDate: ${currentDate}`);
     const { data: activeSubscription, error: subError } = await supabase
         .from('subscriptions')
-        .select('id, end_date, status')
+        .select('id, end_date, status, plan_id, profile_id') // Select more fields for logging
         .eq('profile_id', user.id)
-        .eq('plan_id', YOUR_PROSERVICE_PLAN_ID) 
-        .eq('status', 'active') // Check for active status
-        .or(`end_date.is.null,end_date.gt.${currentDate}`) // end_date is null OR end_date > now
-        .maybeSingle(); // Expect 0 or 1 row
+        .eq('plan_id', YOUR_PROSERVICE_PLAN_ID)
+        .eq('status', 'active')
+        .or(`end_date.is.null,end_date.gt.${currentDate}`)
+        .maybeSingle();
 
     if (subError) {
-        console.error("Error fetching user subscription:", subError);
+        console.error("PROSERVICE_ACTION: Error fetching user subscription:", subError);
         return { success: false, message: "檢查訂閱狀態時出錯，請稍後再試。(Error checking subscription status.)" };
     }
 
+    // ---> Log the result of the subscription query <--- 
     if (activeSubscription) {
-        console.log("Active PROSERVICE subscription found:", activeSubscription);
-        // User has an active subscription, create listing with PENDING status (or ACTIVE)
-        const result = await _saveListingData(formData, user.id, '2', 'PENDING'); // Override status to PENDING
+        console.log("PROSERVICE_ACTION: Found active subscription record:", JSON.stringify(activeSubscription));
+    } else {
+        console.log("PROSERVICE_ACTION: No active subscription record found.");
+    }
 
+    if (activeSubscription) {
+        console.log("PROSERVICE_ACTION: Active subscription confirmed. Creating listing with PENDING status.");
+        const result = await _saveListingData(formData, user.id, '2', 'PENDING');
         if (result.success && result.listingId) {
             revalidatePath('/analytics');
             revalidatePath('/explorer'); 
@@ -259,21 +263,19 @@ export async function createProserviceListingAction(
                 success: true,
                 message: '專業服務列表已成功創建！(Pro Service listing created successfully!)',
                 listingId: result.listingId,
-                shouldRedirect: false // No redirect needed
+                shouldRedirect: false 
             };
         } else {
             return { success: false, message: result.message };
         }
     } else {
-        console.log("No active PROSERVICE subscription found. Proceeding to payment flow.");
-        // No active subscription, proceed with PENDING_PAYMENT and redirect to RevenueCat
-        const result = await _saveListingData(formData, user.id, '2'); // Default status will be PENDING_PAYMENT
-
+        console.log("PROSERVICE_ACTION: No active subscription. Proceeding to payment flow.");
+        const result = await _saveListingData(formData, user.id, '2');
         if (result.success && result.listingId) {
             const revenueCatPaywallBaseUrl = process.env.REVENUECAT_PROSERVICE_PAYWALL_URL;
-            console.log(`Read REVENUECAT_PROSERVICE_PAYWALL_URL: ${revenueCatPaywallBaseUrl}`);
+            console.log(`PROSERVICE_ACTION: Read REVENUECAT_PROSERVICE_PAYWALL_URL: ${revenueCatPaywallBaseUrl}`);
             if (!revenueCatPaywallBaseUrl) {
-                console.error('RevenueCat Paywall URL is not configured.');
+                console.error('PROSERVICE_ACTION: RevenueCat Paywall URL is not configured.');
                 return { success: false, message: '支付配置錯誤，請聯繫管理員。' };
             }
             try {
@@ -283,7 +285,7 @@ export async function createProserviceListingAction(
                     const encodedEmail = encodeURIComponent(user.email);
                     paywallUrl += (paywallUrl.includes('?') ? '&' : '?') + `email=${encodedEmail}`;
                 }
-                console.log(`Constructed Paywall URL for redirect: ${paywallUrl}`);
+                console.log(`PROSERVICE_ACTION: Constructed Paywall URL for redirect: ${paywallUrl}`);
                 revalidatePath('/analytics');
                 return {
                     success: true,
@@ -293,7 +295,7 @@ export async function createProserviceListingAction(
                     redirectUrl: paywallUrl
                 };
             } catch (error) {
-                console.error("Error constructing RevenueCat URL:", error);
+                console.error("PROSERVICE_ACTION: Error constructing RevenueCat URL:", error);
                 return { success: false, message: '準備付款連結時發生內部錯誤。' };
             }
         } else {
