@@ -149,12 +149,59 @@ export async function POST(request: NextRequest) {
       console.error("RevenueCat Webhook: Database operation error:", errorMessage)
       return NextResponse.json({ error: errorMessage }, { status: 500 })
     }
-  } else {
-    console.log("RevenueCat Webhook: Event not relevant or missing app_user_id. Skipping detailed processing.")
-  }
+  } else if (appUserId && rcProductId && proServiceProductIdentifiers.includes(rcProductId) && 
+             (eventType === 'EXPIRATION' || eventType === 'CANCELLATION')) {
+        
+        console.log(`RC Webhook: Processing subscription termination event '${eventType}' for User: ${appUserId}, RC Product: ${rcProductId}`);
+        
+        let newStatus = 'expired'; // Default for EXPIRATION
+        if (eventType === 'CANCELLATION') {
+            // For CANCELLATION, you might want a different status if the subscription is still active until period end.
+            // For simplicity here, we'll also mark it as inactive or a specific 'cancelled' status.
+            // RevenueCat usually sends EXPIRATION when a cancelled sub finally ends.
+            newStatus = 'cancelled'; // Or you could keep it 'active' and rely on end_date.
+            console.log(`RC Webhook: Subscription ${rcProductId} for user ${appUserId} was cancelled.`);
+        }
 
-  // Always respond 200 OK quickly if the request was authorized and parsed, 
-  // even if specific event processing had non-critical issues.
-  // RevenueCat retries on non-200 responses.
-  return NextResponse.json({ received: true }, { status: 200 })
+        try {
+            console.log(`RC Webhook: Attempting to update subscription status to '${newStatus}' for profile_id: ${appUserId}, plan_id: ${PROSERVICE_PLAN_ID}`);
+            const { data: updatedSub, error: subUpdateError } = await supabaseAdmin
+                .from('subscriptions')
+                .update({ 
+                    status: newStatus,
+                    // Optionally, ensure end_date is set if it wasn't already, e.g., from event.expiration_at_ms
+                    end_date: event.expiration_at_ms ? new Date(event.expiration_at_ms).toISOString() : undefined
+                 })
+                .eq('profile_id', appUserId)
+                .eq('plan_id', PROSERVICE_PLAN_ID)
+                // It's usually safer to update based on a more specific identifier if available from the event,
+                // like a RevenueCat subscription ID, if you store that.
+                // For now, (profile_id, plan_id) is the conflict key we used for upsert.
+                .select(); // Select to see if a row was updated
+
+            if (subUpdateError) {
+                console.error(`RC Webhook: Error updating subscription status to '${newStatus}':`, subUpdateError);
+                // Still return 200 if it's a non-critical update failure to prevent excessive retries for this state.
+            } else if (updatedSub && updatedSub.length > 0) {
+                console.log(`RC Webhook: Subscription status updated to '${newStatus}' successfully for user ${appUserId}.`);
+            } else {
+                console.log(`RC Webhook: No active subscription found for profile_id ${appUserId} and plan_id ${PROSERVICE_PLAN_ID} to update status to '${newStatus}'.`);
+            }
+
+            // TODO: Optionally, you might want to change the status of listings owned by this user 
+            // if their PROSERVICE subscription expires/is cancelled.
+            // For example, change their 'PENDING' or 'ACTIVE' listings to 'INACTIVE_SUBSCRIPTION' or similar.
+            // This depends on your business rules.
+
+        } catch (dbError: unknown) {
+            const errorMessage = dbError instanceof Error ? dbError.message : 'Internal database error during status update.';
+            console.error("RC Webhook: DB operation error during status update:", errorMessage);
+            // Still return 200 to avoid retries for what might be a data issue (e.g. no matching sub to update)
+        }
+
+    } else {
+        console.log("RC Webhook: Event not relevant for PROSERVICE or missing app_user_id/product_id, or unhandled termination event. Skipping detailed processing.");
+    }
+
+    return NextResponse.json({ received: true }, { status: 200 });
 }

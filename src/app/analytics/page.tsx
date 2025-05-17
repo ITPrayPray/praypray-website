@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { deleteListingAction, toggleListingVisibilityAction } from './actions'; // <-- Import the delete action and toggle visibility action
 import { Badge } from "@/components/ui/badge"; // <-- Import Badge for status
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // For displaying subscription info
 
 // Define a type for the fetched listing data - Add tag and status
 interface UserListing {
@@ -58,6 +59,15 @@ interface RawListingItem {
     status: string; // <-- ADDED status field here
 }
 
+// ---> Interface for Subscription Details <--- 
+interface SubscriptionDetails {
+  start_date: string;
+  end_date: string | null;
+  status: string; // e.g., 'active', 'cancelled', 'expired'
+  plan_id: number; // To confirm it is the PROSERVICE plan
+  // We might also fetch plan_name if needed later from 'plans' table
+}
+
 export default function AnalyticsPage() {
     const supabase = createClient();
     const router = useRouter(); // <-- Initialize useRouter
@@ -67,6 +77,10 @@ export default function AnalyticsPage() {
     const [listings, setListings] = useState<UserListing[]>([]);
     const [loadingListings, setLoadingListings] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
+
+    // ---> State for Subscription Details <--- 
+    const [subscriptionDetails, setSubscriptionDetails] = useState<SubscriptionDetails | null>(null);
+    const [loadingSubscription, setLoadingSubscription] = useState(true); // Loading state for subscription details
 
     // State for Delete Dialog
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -83,6 +97,8 @@ export default function AnalyticsPage() {
 
     // ---> State for Create Type Selection Dialog <--- 
     const [isCreateTypeDialogOpen, setIsCreateTypeDialogOpen] = useState(false);
+
+    const PROSERVICE_PLAN_ID = 2; // Consistent with actions.ts
 
     // Fetch user data on mount
     useEffect(() => {
@@ -105,47 +121,78 @@ export default function AnalyticsPage() {
         };
     }, [supabase]);
 
-    // Fetch listings when user data is available
+    // Fetch listings AND subscription details when user data is available
     useEffect(() => {
         if (user) {
-            const fetchListings = async () => {
-                setLoadingListings(true);
-                setFetchError(null);
-                const { data: rawData, error } = await supabase
-                    .from('listings')
-                    .select('listing_id, listing_name, created_at, state:state_id(state_name), tag:tag_id(tag_name), status')
-                    .eq('owner_id', user.id)
-                    .order('created_at', { ascending: false })
-                    .returns<RawListingItem[]>();
-                
-                if (error) {
-                    console.error("Error fetching user listings:", error);
-                    setFetchError(error.message);
+            setLoadingListings(true);
+            setLoadingSubscription(true); // Start loading subscription
+            setFetchError(null);
+
+            const fetchAllData = async () => {
+                try {
+                    // Fetch Listings
+                    const { data: rawListingsData, error: listingsError } = await supabase
+                        .from('listings')
+                        .select('listing_id, listing_name, created_at, state:state_id(state_name), tag:tag_id(tag_name), status')
+                        .eq('owner_id', user.id)
+                        .order('created_at', { ascending: false })
+                        .returns<RawListingItem[]>();
+                    
+                    if (listingsError) throw listingsError;
+                    if (rawListingsData) {
+                        // Map to the final UserListing type
+                        const formattedListings: UserListing[] = rawListingsData.map(item => ({
+                            listing_id: item.listing_id,
+                            listing_name: item.listing_name,
+                            created_at: item.created_at,
+                            // Handle potential array/object/null from join
+                            state: Array.isArray(item.state) ? item.state[0] ?? null : item.state ?? null,
+                            tag: Array.isArray(item.tag) ? item.tag[0] ?? null : item.tag ?? null,
+                            status: item.status // Should now be correctly typed
+                        }));
+                        setListings(formattedListings);
+                    } else {
+                        setListings([]);
+                    }
+
+                    // Fetch PROSERVICE Subscription Details
+                    // Fetch the most recent subscription record for the proservice plan
+                    const { data: subData, error: subError } = await supabase
+                        .from('subscriptions')
+                        .select('start_date, end_date, status, plan_id')
+                        .eq('profile_id', user.id)
+                        .eq('plan_id', PROSERVICE_PLAN_ID) 
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .maybeSingle(); // Expect 0 or 1 row
+
+                    if (subError) throw subError;
+                    if (subData) {
+                        setSubscriptionDetails(subData as SubscriptionDetails);
+                    } else {
+                        setSubscriptionDetails(null);
+                    }
+
+                } catch (error: unknown) {
+                    const errorMessage = error instanceof Error ? error.message : "Unknown error fetching data";
+                    console.error("Error fetching user data (listings or subscription):", errorMessage);
+                    setFetchError(errorMessage);
                     setListings([]);
-                } else if (rawData) {
-                    // Map to the final UserListing type
-                    const formattedListings: UserListing[] = rawData.map(item => ({
-                        listing_id: item.listing_id,
-                        listing_name: item.listing_name,
-                        created_at: item.created_at,
-                        // Handle potential array/object/null from join
-                        state: Array.isArray(item.state) ? item.state[0] ?? null : item.state ?? null,
-                        tag: Array.isArray(item.tag) ? item.tag[0] ?? null : item.tag ?? null,
-                        status: item.status // Should now be correctly typed
-                    }));
-                    setListings(formattedListings);
-                } else {
-                    setListings([]);
+                    setSubscriptionDetails(null);
+                } finally {
+                    setLoadingListings(false);
+                    setLoadingSubscription(false);
                 }
-                setLoadingListings(false);
             };
-            fetchListings();
+            fetchAllData();
         } else {
             // Clear listings if user logs out
             setListings([]);
             setLoadingListings(false); 
+            setSubscriptionDetails(null);
+            setLoadingSubscription(false);
         }
-    }, [user, supabase]); // Re-fetch if user changes
+    }, [user, supabase, PROSERVICE_PLAN_ID]);
 
     // --- Toggle Visibility Handler ---
     const handleToggleVisibility = async (listingId: string, currentStatus: string) => {
@@ -214,6 +261,53 @@ export default function AnalyticsPage() {
         router.push('/analytics/create/proservice');
     };
 
+    // ---> Function to render subscription status message <--- 
+    const renderSubscriptionMessage = () => {
+        if (loadingSubscription) {
+            return <p className="text-sm text-muted-foreground mb-4">正在載入訂閱信息... (Loading subscription info...)</p>;
+        }
+        if (!subscriptionDetails) {
+            // Could be no proservice plan ever, or plan_id doesn't match
+            return null; // Or a generic message like "No active Proservice plan."
+        }
+
+        const { start_date, end_date, status } = subscriptionDetails;
+        const formatDate = (dateString: string | null) => dateString ? new Date(dateString).toLocaleDateString() : 'N/A';
+
+        if (status === 'active') {
+            return (
+                <Alert variant="default" className="mb-6">
+                    <AlertTitle>專業服務計劃有效 (Pro Service Plan Active)</AlertTitle>
+                    <AlertDescription>
+                        您的計劃生效日期：{formatDate(start_date)}。
+                        {end_date ? ` 到期日期：${formatDate(end_date)}。` : ' 這是一個持續有效的計劃。'}
+                    </AlertDescription>
+                </Alert>
+            );
+        }
+        if (status === 'cancelled') {
+            return (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertTitle>專業服務計劃已取消 (Pro Service Plan Cancelled)</AlertTitle>
+                    <AlertDescription>
+                        您已取消您的專業服務計劃。目前的權益將持續到 {formatDate(end_date)}，之後將不會續費。
+                    </AlertDescription>
+                </Alert>
+            );
+        }
+        if (status === 'expired') {
+            return (
+                <Alert variant="destructive" className="mb-6">
+                    <AlertTitle>專業服務計劃已過期 (Pro Service Plan Expired)</AlertTitle>
+                    <AlertDescription>
+                        您的專業服務計劃已於 {formatDate(end_date)} 過期。
+                    </AlertDescription>
+                </Alert>
+            );
+        }
+        return null; // No message for other statuses or if no details
+    };
+
     // --- Render Page --- 
     if (loadingUser) {
         // Optional: Show a full page loading spinner or skeleton
@@ -252,6 +346,9 @@ export default function AnalyticsPage() {
                     </Dialog>
                 )}
             </div>
+
+            {/* ---> Display Subscription Message <--- */} 
+            {user && renderSubscriptionMessage()}
 
             {!user ? (
                 // --- Render Login Prompt --- 
