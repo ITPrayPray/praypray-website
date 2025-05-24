@@ -184,6 +184,24 @@ export async function POST(request: NextRequest) {
                 // Still return 200 if it's a non-critical update failure to prevent excessive retries for this state.
             } else if (updatedSub && updatedSub.length > 0) {
                 console.log(`RC Webhook: Subscription status updated to '${newStatus}' successfully for user ${appUserId}.`);
+
+                // New logic: Update all PROSERVICE listings for this user to PENDING_PAYMENT
+                console.log(`RC Webhook: Attempting to update PROSERVICE listings to PENDING_PAYMENT for owner_id: ${appUserId}`);
+                const { error: listingStatusUpdateError } = await supabaseAdmin
+                    .from('listings')
+                    .update({ status: 'PENDING_PAYMENT' }) // Set status to PENDING_PAYMENT
+                    .eq('owner_id', appUserId)
+                    .eq('listing_type', 'PROSERVICE'); // Only for PROSERVICE listings
+
+                if (listingStatusUpdateError) {
+                    console.error(`RC Webhook: Error updating PROSERVICE listings to PENDING_PAYMENT for owner_id ${appUserId}:`, listingStatusUpdateError.message);
+                    // Log error, but don't necessarily fail the webhook response for this,
+                    // as the primary goal (subscription update) was successful.
+                } else {
+                    // This will also log success if no listings were found (0 rows updated is not an error from Supabase update)
+                    console.log(`RC Webhook: Successfully triggered update for PROSERVICE listings to PENDING_PAYMENT for owner_id ${appUserId}. Check DB for actual changes.`);
+                }
+
             } else {
                 console.log(`RC Webhook: No active subscription found for profile_id ${appUserId} and plan_id ${PROSERVICE_PLAN_ID} to update status to '${newStatus}'.`);
             }
@@ -192,6 +210,7 @@ export async function POST(request: NextRequest) {
             // if their PROSERVICE subscription expires/is cancelled.
             // For example, change their 'PENDING' or 'ACTIVE' listings to 'INACTIVE_SUBSCRIPTION' or similar.
             // This depends on your business rules.
+            // The above code handles a specific case of this TODO.
 
         } catch (dbError: unknown) {
             const errorMessage = dbError instanceof Error ? dbError.message : 'Internal database error during status update.';
