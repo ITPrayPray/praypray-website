@@ -185,21 +185,21 @@ export async function POST(request: NextRequest) {
             } else if (updatedSub && updatedSub.length > 0) {
                 console.log(`RC Webhook: Subscription status updated to '${newStatus}' successfully for user ${appUserId}.`);
 
-                // New logic: Update all PROSERVICE listings for this user to PENDING_PAYMENT
-                console.log(`RC Webhook: Attempting to update PROSERVICE listings to PENDING_PAYMENT for owner_id: ${appUserId}`);
+                // Corrected logic: Update all PROSERVICE listings (identified by tag_id = 2) for this user to PENDING_PAYMENT
+                const proserviceTagId = 2; // Defined PROSERVICE tag_id
+                console.log(`RC Webhook: Attempting to update PROSERVICE listings (tag_id: ${proserviceTagId}) to PENDING_PAYMENT for owner_id: ${appUserId}`);
                 const { error: listingStatusUpdateError } = await supabaseAdmin
                     .from('listings')
                     .update({ status: 'PENDING_PAYMENT' }) // Set status to PENDING_PAYMENT
                     .eq('owner_id', appUserId)
-                    .eq('listing_type', 'PROSERVICE'); // Only for PROSERVICE listings
+                    .eq('tag_id', proserviceTagId); // Correctly filter by tag_id for PROSERVICE listings
 
                 if (listingStatusUpdateError) {
-                    console.error(`RC Webhook: Error updating PROSERVICE listings to PENDING_PAYMENT for owner_id ${appUserId}:`, listingStatusUpdateError.message);
+                    console.error(`RC Webhook: Error updating PROSERVICE listings (tag_id: ${proserviceTagId}) to PENDING_PAYMENT for owner_id ${appUserId}:`, listingStatusUpdateError.message);
                     // Log error, but don't necessarily fail the webhook response for this,
                     // as the primary goal (subscription update) was successful.
                 } else {
-                    // This will also log success if no listings were found (0 rows updated is not an error from Supabase update)
-                    console.log(`RC Webhook: Successfully triggered update for PROSERVICE listings to PENDING_PAYMENT for owner_id ${appUserId}. Check DB for actual changes.`);
+                    console.log(`RC Webhook: Successfully triggered update for PROSERVICE listings (tag_id: ${proserviceTagId}) to PENDING_PAYMENT for owner_id ${appUserId}. Check DB for actual changes.`);
                 }
 
             } else {
