@@ -328,12 +328,34 @@ export default function AnalyticsPage() {
                             <Button 
                                 variant="default" // Or "secondary", "primary" depending on your theme
                                 onClick={() => {
-                                    if (REVENUECAT_PROSERVICE_PAYWALL_URL && REVENUECAT_PROSERVICE_PAYWALL_URL !== "https://fallback-paywall-url.com/proservice") {
-                                        window.location.href = REVENUECAT_PROSERVICE_PAYWALL_URL;
+                                    const paywallBaseUrl = REVENUECAT_PROSERVICE_PAYWALL_URL; // This uses NEXT_PUBLIC_...
+
+                                    if (paywallBaseUrl && paywallBaseUrl !== "https://fallback-paywall-url.com/proservice") {
+                                        if (user && user.id) { // Ensure user and user.id exist
+                                            const encodedAppUserId = encodeURIComponent(user.id);
+                                            // Ensure there's a slash between base URL and user ID, but not double slashes if base URL already ends with one.
+                                            let finalPaywallUrl = paywallBaseUrl.endsWith('/') 
+                                                                    ? `${paywallBaseUrl}${encodedAppUserId}` 
+                                                                    : `${paywallBaseUrl}/${encodedAppUserId}`;
+
+                                            if (user.email) {
+                                                const encodedEmail = encodeURIComponent(user.email);
+                                                // Append email as query parameter. 
+                                                // The server action code implies that email is the first query param if present, 
+                                                // so we use '?' directly. If other params could exist on base URL, logic would be more complex.
+                                                finalPaywallUrl += `?email=${encodedEmail}`; 
+                                            }
+                                            
+                                            console.log("Analytics Page: Redirecting to Paywall:", finalPaywallUrl);
+                                            window.location.href = finalPaywallUrl;
+
+                                        } else {
+                                            alert('無法獲取用戶信息，請重新登入後再試。(Cannot get user information, please log in again and retry.)');
+                                            console.error("User ID is not available for paywall redirect from Analytics Page.");
+                                        }
                                     } else {
-                                        // Handle missing or fallback URL case, e.g., show an alert or log an error
                                         alert('付費牆連結配置錯誤，請聯絡管理員。(Paywall URL configuration error, please contact administrator.)');
-                                        console.error("RevenueCat Proservice Paywall URL is not configured or is using fallback.");
+                                        console.error("RevenueCat Proservice Paywall URL (NEXT_PUBLIC_REVENUECAT_PROSERVICE_PAYWALL_URL) is not configured or is using fallback.");
                                     }
                                 }}
                             >
