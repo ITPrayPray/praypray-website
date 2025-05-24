@@ -99,6 +99,7 @@ export default function AnalyticsPage() {
     const [isCreateTypeDialogOpen, setIsCreateTypeDialogOpen] = useState(false);
 
     const PROSERVICE_PLAN_ID = 2; // Consistent with actions.ts
+    const REVENUECAT_PROSERVICE_PAYWALL_URL = process.env.NEXT_PUBLIC_REVENUECAT_PROSERVICE_PAYWALL_URL || "https://fallback-paywall-url.com/proservice"; // Fallback URL, ensure your env var is set
 
     // Fetch user data on mount
     useEffect(() => {
@@ -321,29 +322,49 @@ export default function AnalyticsPage() {
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-2xl font-bold">{user ? '我的列表 (My Listings)' : '列表管理 (Listings Management)'}</h1>
                 {user && (
-                    <Dialog open={isCreateTypeDialogOpen} onOpenChange={setIsCreateTypeDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button><PlusCircle className="mr-2 h-4 w-4" /> 創建新列表 (Create New Listing)</Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-md">
-                            <DialogHeader>
-                                <DialogTitle>選擇列表類型 (Select Listing Type)</DialogTitle>
-                                <DialogDescription>
-                                    您想創建哪種類型的列表？ (Which type of listing would you like to create?)
-                                </DialogDescription>
-                            </DialogHeader>
-                            <div className="grid grid-cols-1 gap-4 py-4">
-                                <Button variant="outline" onClick={goToCreateTemple} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
-                                    <span className="text-base">創建廟宇 (Create Temple)</span>
-                                    <span className="text-xs text-muted-foreground text-center px-2">適合廟宇、神壇等宗教場所。</span>
-                                </Button>
-                                <Button variant="outline" onClick={goToCreateProservice} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
-                                    <span className="text-base">創建專業服務 (Create Pro Service)</span>
-                                    <span className="text-xs text-muted-foreground text-center px-2">適合算命、風水、法事等專業服務提供者。</span>
-                                </Button>
-                            </div>
-                        </DialogContent>
-                    </Dialog>
+                    <div className="flex space-x-2">
+                        {/* Conditional "Upgrade to PRO" Button */}
+                        {!loadingSubscription && (!subscriptionDetails || subscriptionDetails.status === 'expired' || subscriptionDetails.status === 'cancelled') && (
+                            <Button 
+                                variant="default" // Or "secondary", "primary" depending on your theme
+                                onClick={() => {
+                                    if (REVENUECAT_PROSERVICE_PAYWALL_URL && REVENUECAT_PROSERVICE_PAYWALL_URL !== "https://fallback-paywall-url.com/proservice") {
+                                        window.location.href = REVENUECAT_PROSERVICE_PAYWALL_URL;
+                                    } else {
+                                        // Handle missing or fallback URL case, e.g., show an alert or log an error
+                                        alert('付費牆連結配置錯誤，請聯絡管理員。(Paywall URL configuration error, please contact administrator.)');
+                                        console.error("RevenueCat Proservice Paywall URL is not configured or is using fallback.");
+                                    }
+                                }}
+                            >
+                                <PlusCircle className="mr-2 h-4 w-4" /> {/* Or a different icon like Star or Zap */}
+                                升級 PROSERVICE (Upgrade PRO)
+                            </Button>
+                        )}
+                        <Dialog open={isCreateTypeDialogOpen} onOpenChange={setIsCreateTypeDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button><PlusCircle className="mr-2 h-4 w-4" /> 創建新列表 (Create New Listing)</Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>選擇列表類型 (Select Listing Type)</DialogTitle>
+                                    <DialogDescription>
+                                        您想創建哪種類型的列表？ (Which type of listing would you like to create?)
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="grid grid-cols-1 gap-4 py-4">
+                                    <Button variant="outline" onClick={goToCreateTemple} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
+                                        <span className="text-base">創建廟宇 (Create Temple)</span>
+                                        <span className="text-xs text-muted-foreground text-center px-2">適合廟宇、神壇等宗教場所。</span>
+                                    </Button>
+                                    <Button variant="outline" onClick={goToCreateProservice} className="h-auto py-3 flex flex-col items-center justify-center space-y-2">
+                                        <span className="text-base">創建專業服務 (Create Pro Service)</span>
+                                        <span className="text-xs text-muted-foreground text-center px-2">適合算命、風水、法事等專業服務提供者。</span>
+                                    </Button>
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
                 )}
             </div>
 
